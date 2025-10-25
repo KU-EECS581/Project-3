@@ -7,30 +7,46 @@
 
 import { useCallback, useState } from 'react'
 import './App.css'
-import { useWebSocket } from './websockets/useWebSocket'
+import { useGameServer } from './api/hooks/useGameServer'
+import { JoinGameMenu } from './components/JoinGameMenu';
+import type { ServerConnectionRequest } from './api';
+
+const DEFAULT_HOST = "localhost";
+const DEFAULT_PORT = -1; // Invalid port to force user input
+const DEFAULT_USER = { id: 'user1', name: 'Player1' }; // Placeholder user
 
 function App() {
-  const [websocketUrl, setWebsocketUrl] = useState('ws://localhost:8080')
-  const websocket = useWebSocket(websocketUrl)
+   // TODO: Replace with actual user data.
+  const [request, setRequest] = useState<ServerConnectionRequest>({
+    host: DEFAULT_HOST,
+    port: DEFAULT_PORT,
+    user: DEFAULT_USER
+  });
+  const websocket = useGameServer(request);
 
-  const handleJoinGame = useCallback((event: React.FormEvent) => {
-    event.preventDefault()
-    console.log("Joining server...")
-    // TODO: Future implementation for joining a game will go here.
-  }, [])
+  const handleJoinGame = useCallback((host: string, port: number) => {
+    setRequest((prev) => ({
+      ...prev,
+      host,
+      port: Number(port)
+    }));
+
+    console.log(`Joining server at ${host}:${port}...`)
+  }, []);
+
+  const handleTestMessage = useCallback(() => {
+    if (websocket.isConnected) {
+      websocket.sendMessage("Hello World!");
+    }
+  }, [websocket]);
 
   return (
     <>
       <h1>EECS 581 - Casino</h1>
 
-      <h2>Join a Server</h2>
-      <form onSubmit={handleJoinGame}>
-        <label htmlFor="host">Host: </label>
-        <input type="text" id="host" placeholder='localhost'/> <br/>
-        <label htmlFor="port">Port: </label>
-        <input type="text" id="port" placeholder='8080'/> <br/>
-        <button type="submit">Join Game</button>
-      </form>
+      <JoinGameMenu hidden={websocket.isConnected} onJoinGame={handleJoinGame} />
+
+      <button hidden={!websocket.isConnected} onClick={handleTestMessage}>Send Test Message</button>
     </>
   )
 }
