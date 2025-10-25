@@ -5,4 +5,4 @@
  * @date 2025-10-25
  */
 
-export * from './ServerConnectionRequest';
+export * from './MovementMessage';

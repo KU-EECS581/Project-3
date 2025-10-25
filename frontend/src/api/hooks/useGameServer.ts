@@ -6,7 +6,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { MovementMessage, ServerConnectionRequest } from "../../api";
+import type { ServerConnectionRequest } from "@api/index";
+import type { MovementMessage } from "~middleware/models";
 
 export interface UseGameServerReturn {
     isConnecting: boolean;
