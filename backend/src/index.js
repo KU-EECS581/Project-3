@@ -5,17 +5,27 @@
  * @date 2025-10-24
  */
 
-const http = require('http');
+import { WebSocketServer } from 'ws';
 
-const hostname = '127.0.0.1';
-const port = 3000;
+const host = process.env.HOST || 'localhost';
+const port = process.env.PORT || 8080;
 
-const server = http.createServer((req, res) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    res.end('Hello, World!\n');
+const wss = new WebSocketServer({ port: port, host: host });
+
+wss.on('connection', function connection(ws) {
+    console.log('Client connected');
+
+    ws.on('message', function message(data) {
+        console.log(`Received: ${data}`);
+        // Echo the message back to the client
+        ws.send(`Server received: ${data}`);
+    });
+
+    ws.on('close', () => {
+        console.log('Client disconnected');
+    });
+
+    ws.send('Welcome to the WebSocket server!');
 });
 
-server.listen(port, hostname, () => {
-    console.log(`Server running at http://${hostname}:${port}/`);
-});
+console.log('WebSocket server is running on ws://localhost:8080');

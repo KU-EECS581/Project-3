@@ -1,6 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "This is the backend of the project for the LAN multiplayer WebSockets server.",
   "main": "src/index.js",
   "scripts": {
@@ -9,5 +10,8 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
 }
