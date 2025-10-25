@@ -111,9 +111,10 @@ export function useGameServer(request: ServerConnectionRequest) {
             setReadyState(ws.readyState);
         };
 
-        const handleMessage = () => {
+        const handleMessage = (event: MessageEvent) => {
             // setReceivedMessages((prev) => [...prev, /* event.data */]);
             // Keep for future use
+            console.log(event.data);
             setReadyState(ws.readyState);
         };
 
