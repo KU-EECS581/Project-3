@@ -5,27 +5,37 @@
  * @date 2025-10-24
  */
 
-import { WebSocketServer } from 'ws';
+import { createInterface } from 'readline';
+import { KEY_RESTART, KEY_SEE_CLIENTS, KEY_SEE_LOBBIES, KEY_SHUTDOWN } from './constants';
+import { GameServer } from './server';
 
-const host = process.env.HOST || 'localhost';
-const port = Number(process.env.PORT) || 8080;
+const host = process.env.HOST || undefined;
+const port = process.env.PORT ? Number(process.env.PORT) : undefined;
 
-const wss = new WebSocketServer({ port: port, host: host });
+// Start the game server
+const server = new GameServer(host, port);
 
-wss.on('connection', function connection(ws) {
-    console.log('Client connected');
-
-    ws.on('message', function message(data) {
-        console.log(`Received: ${data}`);
-        // Echo the message back to the client
-        ws.send(`Server received: ${data}`);
-    });
-
-    ws.on('close', () => {
-        console.log('Client disconnected');
-    });
-
-    ws.send('Welcome to the WebSocket server!');
+// Allow input for debugging
+const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout
 });
 
-console.log('WebSocket server is running on ws://localhost:8080');
+rl.question(`Press '${KEY_RESTART}' to restart the server or '${KEY_SHUTDOWN}' to shut it down.\n`, (input) => {
+    switch (input) {
+        case KEY_RESTART:
+            console.log('Restarting server...');
+            process.exit(0); // Exit with code 0 to indicate a restart
+        case KEY_SHUTDOWN:
+            console.log('Shutting down server...');
+            process.exit(0); // Exit with code 0 to indicate a normal shutdown
+        case KEY_SEE_CLIENTS:
+            console.log('Connected clients: (placeholder)');
+        case KEY_SEE_LOBBIES:
+            console.log('Active game lobbies: (placeholder)');
+        default:
+            console.log('Invalid input. Server continues to run.');
+    }
+
+    rl.close();
+});
