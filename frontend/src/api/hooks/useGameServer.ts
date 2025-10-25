@@ -1,26 +1,55 @@
+/**
+ * @file useGameServer.ts
+ * @description Custom hook for managing WebSocket connections to the game server.
+ * @author Riley Meyerkorth
+ * @date 2025-10-25
+ */
+
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ServerConnectionRequest } from "../../api";
+import type { MovementMessage, ServerConnectionRequest } from "../../api";
+
+export interface UseGameServerReturn {
+    isConnecting: boolean;
+    isConnected: boolean;
+    isClosing: boolean;
+    isClosed: boolean;
+    sendMessage: (message: string) => void;
+    sendMovement: (movement: MovementMessage) => void;
+    receivedMessages: string[];
+}
 
 export function useGameServer(request: ServerConnectionRequest) {
     const [receivedMessages, /*setReceivedMessages*/] = useState<string[]>([]);
 
-    // Create the WebSocket instance when request changes (host/port/user)
-    const ws = useMemo(() => {
+    /**
+     * Checks each part of the ServerConnectionRequest for validity.
+     * @returns True if the request is valid, false otherwise.
+     */
+    const isRequestValid = useCallback(() => {
         // Validate host
         if (!request.host) {
             console.error(`Invalid host: ${request.host}`);
-            return undefined;
+            return false;
         }
 
         // Validate port
         if (isNaN(request.port) || request.port <= 0 || request.port > 65535) {
             console.error(`Invalid port: ${request.port}`);
-            return undefined;
+            return false;
         }
 
         // Validate user
         if (!request.user || !request.user.id || !request.user.name) {
             console.error(`Invalid user data`);
+            return false;
+        }
+
+        return true;
+    }, [request]);
+
+    // Create the WebSocket instance when request changes (host/port/user)
+    const ws = useMemo(() => {
+        if (!isRequestValid()) {
             return undefined;
         }
 
@@ -30,10 +59,42 @@ export function useGameServer(request: ServerConnectionRequest) {
             console.error('Failed to create WebSocket:', err);
             return undefined;
         }
-    }, [request]);
+    }, [request, isRequestValid]);
 
     // Keep track of readyState in React state so renders update when it changes
     const [readyState, setReadyState] = useState<number | undefined>(ws?.readyState);
+
+    // Derived booleans from readyState (stable values causing re-renders when readyState updates)
+    const isConnecting = useMemo(() => readyState === WebSocket.CONNECTING, [readyState]);
+    const isConnected = useMemo(() => readyState === WebSocket.OPEN, [readyState]);
+    const isClosing = useMemo(() => readyState === WebSocket.CLOSING, [readyState]);
+    const isClosed = useMemo(() => readyState === WebSocket.CLOSED, [readyState]);
+
+    /**
+     * Sends a message through the WebSocket connection.
+     * @param message The message to send as a string.
+     */
+    const sendMessage = useCallback((message: string) => {
+        if (!ws) {
+            console.error('WebSocket is not available');
+            return;
+        }
+
+        if (ws.readyState !== WebSocket.OPEN) {
+            console.error('WebSocket is not open - cannot send message');
+            return;
+        }
+
+        ws.send(message);
+    }, [ws]);
+
+    /**
+     * Sends a movement message to the server.
+     * @param movement The movement message containing x and y coordinates.
+     */
+    const sendMovement = useCallback((movement: MovementMessage) => {
+        sendMessage(JSON.stringify(movement));
+    }, [sendMessage]);
 
     useEffect(() => {
         if (!ws) {
@@ -94,36 +155,13 @@ export function useGameServer(request: ServerConnectionRequest) {
         };
     }, [ws]);
 
-    // Derived booleans from readyState (stable values causing re-renders when readyState updates)
-    const isConnecting = useMemo(() => readyState === WebSocket.CONNECTING, [readyState]);
-    const isConnected = useMemo(() => readyState === WebSocket.OPEN, [readyState]);
-    const isClosing = useMemo(() => readyState === WebSocket.CLOSING, [readyState]);
-    const isClosed = useMemo(() => readyState === WebSocket.CLOSED, [readyState]);
-
-    /**
-     * Sends a message through the WebSocket connection.
-     * @param message The message to send as a string.
-     */
-    const sendMessage = useCallback((message: string) => {
-        if (!ws) {
-            console.error('WebSocket is not available');
-            return;
-        }
-
-        if (ws.readyState !== WebSocket.OPEN) {
-            console.error('WebSocket is not open - cannot send message');
-            return;
-        }
-
-        ws.send(message);
-    }, [ws]);
-
     return {
         isConnecting,
         isClosing,
         isClosed,
         isConnected,
         sendMessage,
+        sendMovement,
         receivedMessages
     };
 }

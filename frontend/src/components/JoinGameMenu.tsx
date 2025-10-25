@@ -1,3 +1,10 @@
+/**
+ * @file JoinGameMenu.tsx
+ * @description Form component for joining a game server.
+ * @author Riley Meyerkorth
+ * @date 2025-10-25
+ */
+
 import React, { useCallback } from "react"
 
 interface JoinGameMenuProps extends React.ComponentProps<'form'> {
