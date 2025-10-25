@@ -1,5 +1,5 @@
 /**
- * @file index.js
+ * @file index.ts
  * @description Simple HTTP server for the backend. Placeholder for future backend functionality.
  * @author Riley Meyerkorth
  * @date 2025-10-24
@@ -8,7 +8,7 @@
 import { WebSocketServer } from 'ws';
 
 const host = process.env.HOST || 'localhost';
-const port = process.env.PORT || 8080;
+const port = Number(process.env.PORT) || 8080;
 
 const wss = new WebSocketServer({ port: port, host: host });
 
