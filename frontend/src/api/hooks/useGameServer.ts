@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { ServerConnectionRequest } from "@api/index";
+import { MAX_PORT, MIN_PORT, type ServerConnectionRequest } from "@api/index";
 import type { MovementMessage } from "~middleware/models";
 import { MovementMessageSchema } from "~middleware/models";
 import type { PlayerCharacter } from "@/models";
@@ -39,7 +39,7 @@ export function useGameServer(request: ServerConnectionRequest) {
         }
 
         // Validate port
-        if (isNaN(request.port) || request.port <= 0 || request.port > 65535) {
+        if (isNaN(request.port) || request.port < MIN_PORT || request.port > MAX_PORT) {
             console.error(`Invalid port: ${request.port}`);
             return false;
         }
