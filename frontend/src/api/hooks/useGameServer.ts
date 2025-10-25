@@ -8,6 +8,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ServerConnectionRequest } from "@api/index";
 import type { MovementMessage } from "~middleware/models";
+import { MovementMessageSchema } from "~middleware/models";
+import type { PlayerCharacter } from "@/models";
 
 export interface UseGameServerReturn {
     isConnecting: boolean;
@@ -15,11 +17,14 @@ export interface UseGameServerReturn {
     isClosing: boolean;
     isClosed: boolean;
     sendMessage: (message: string) => void;
-    sendMovement: (movement: MovementMessage) => void;
+    sendMovement: (movement: Omit<MovementMessage, "user">) => void;
     receivedMessages: string[];
+    players: PlayerCharacter[];
+    addPlayer: (player: PlayerCharacter) => void;
 }
 
 export function useGameServer(request: ServerConnectionRequest) {
+    const [players, setPlayers] = useState<PlayerCharacter[]>([]);
     const [receivedMessages, /*setReceivedMessages*/] = useState<string[]>([]);
 
     /**
@@ -93,9 +98,32 @@ export function useGameServer(request: ServerConnectionRequest) {
      * Sends a movement message to the server.
      * @param movement The movement message containing x and y coordinates.
      */
-    const sendMovement = useCallback((movement: MovementMessage) => {
-        sendMessage(JSON.stringify(movement));
-    }, [sendMessage]);
+    const sendMovement = useCallback((movement: Omit<MovementMessage, "user">) => {
+        if (!request.user) return;
+        const payload: MovementMessage = { user: request.user, ...movement };
+
+        // Optimistic update locally
+        setPlayers((prev) => {
+            const idx = prev.findIndex(p => p.user.id === request.user.id);
+            const updated: PlayerCharacter = { user: request.user, x: movement.x, y: movement.y };
+            if (idx >= 0) {
+                const copy = [...prev];
+                copy[idx] = updated;
+                return copy;
+            }
+            return [...prev, updated];
+        });
+
+        sendMessage(JSON.stringify(payload));
+    }, [sendMessage, request.user, setPlayers]);
+
+    const addPlayer = useCallback((player: PlayerCharacter) => {
+        setPlayers((prev) => {
+            const exists = prev.some(p => p.user.id === player.user.id);
+            if (exists) return prev;
+            return [...prev, player];
+        });
+    }, [setPlayers]);
 
     useEffect(() => {
         if (!ws) {
@@ -114,8 +142,28 @@ export function useGameServer(request: ServerConnectionRequest) {
 
         const handleMessage = (event: MessageEvent) => {
             // setReceivedMessages((prev) => [...prev, /* event.data */]);
-            // Keep for future use
-            console.log(event.data);
+            try {
+                const parsed = JSON.parse(event.data);
+                const result = MovementMessageSchema.safeParse(parsed);
+                if (result.success) {
+                    const { user, x, y } = result.data;
+                    setPlayers((prev) => {
+                        const idx = prev.findIndex(p => p.user.id === user.id);
+                        const updated: PlayerCharacter = { user, x, y };
+                        if (idx >= 0) {
+                            const copy = [...prev];
+                            copy[idx] = updated;
+                            return copy;
+                        }
+                        return [...prev, updated];
+                    });
+                } else {
+                    // Not a movement message; ignore for now
+                    // console.debug('Non-movement message received');
+                }
+            } catch {
+                // Non-JSON; ignore
+            }
             setReadyState(ws.readyState);
         };
 
@@ -164,6 +212,8 @@ export function useGameServer(request: ServerConnectionRequest) {
         isConnected,
         sendMessage,
         sendMovement,
-        receivedMessages
+        receivedMessages,
+        players,
+        addPlayer,
     };
 }

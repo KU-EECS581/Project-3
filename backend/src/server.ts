@@ -35,9 +35,6 @@ export class GameServer {
 
         ws.on('message', (data) => {
             this.processMessage(data.toString(), ws);
-
-            // Echo the message back to the client
-            ws.send(`Server received: ${data}`);
         });
 
         ws.on('close', () => {
@@ -52,17 +49,28 @@ export class GameServer {
     }
 
     private processMessage(message: string, ws: WebSocket) {
-        // Placeholder for message processing logic
-        console.log(`Processing message: ${message}`);
-
         // Try to parse the message
-        const result = MovementMessageSchema.safeParse(JSON.parse(message));
+        let parsed: unknown;
+        try {
+            parsed = JSON.parse(message);
+        } catch (e) {
+            console.error('Received non-JSON message:', message);
+            return;
+        }
+
+        const result = MovementMessageSchema.safeParse(parsed);
         if (!result.success) {
             console.error('Invalid message format:', result.error);
             return;
         }
-    
-        const { x, y } = result.data;
-        console.log(`Parsed movement message: x=${x}, y=${y}`);
+
+        const movement = result.data;
+        // Broadcast movement to all connected clients (including sender)
+        const payload = JSON.stringify(movement);
+        this.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(payload);
+            }
+        });
     }
 }

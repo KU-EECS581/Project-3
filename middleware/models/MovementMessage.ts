@@ -11,11 +11,19 @@ import * as z from "zod";
  * Interface representing a movement message with x and y coordinates.
  */
 export interface MovementMessage {
+    user: {
+        id: string;
+        name: string;
+    };
     x: number;
     y: number;
 }
  
 export const MovementMessageSchema = z.object({ 
+  user: z.object({
+    id: z.string(),
+    name: z.string()
+  }),
   x: z.number(),
   y: z.number()
 });
