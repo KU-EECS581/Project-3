@@ -15,12 +15,18 @@ export class GameServer {
         this.start();
     }
 
-    private start() {
+    public start() {
         this.wss.on('connection', (ws: WebSocket) => {
             this.onClientConnect(ws);
         });
 
         console.log(`WebSocket server is running on ws://${this.host}:${this.port}`);
+    }
+
+    public stop() {
+        this.wss.close(() => {
+            console.log('WebSocket server has been stopped.');
+        });
     }
 
     private onClientConnect(ws: WebSocket) {
@@ -37,6 +43,9 @@ export class GameServer {
         ws.on('close', () => {
             console.log('Client disconnected');
             this.clients.delete(ws);
+            this.lobbies.forEach((clients, lobbyId) => {
+                this.lobbies.set(lobbyId, clients.filter(client => client !== ws));
+            });
         });
 
         ws.send('Welcome to the WebSocket server!');

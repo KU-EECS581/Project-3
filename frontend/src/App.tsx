@@ -14,6 +14,13 @@ import { useMouse } from '@uidotdev/usehooks';
 const DEFAULT_HOST = "localhost";
 const DEFAULT_PORT = -1; // Invalid port to force user input
 const DEFAULT_USER = { id: 'user1', name: 'Player1' }; // Placeholder user
+const DEFAULT_CHARACTER_X = 50;
+const DEFAULT_CHARACTER_Y = 50;
+const DEFAULT_CHARACTER = {
+    user: DEFAULT_USER,
+    x: DEFAULT_CHARACTER_X,
+    y: DEFAULT_CHARACTER_Y
+  };
 
 function App() {
   const [mouse, ref] = useMouse();
@@ -24,6 +31,7 @@ function App() {
     port: DEFAULT_PORT,
     user: DEFAULT_USER
   });
+  const [char, setChar] = useState(DEFAULT_CHARACTER);
   const websocket = useGameServer(request);
 
   const handleJoinGame = useCallback((host: string, port: number) => {
@@ -39,6 +47,13 @@ function App() {
   const handleMovement = useCallback(() => {
     if (websocket.isConnected) {
       websocket.sendMovement({ x: mouse.elementX, y: mouse.elementY });
+
+      // Set local character position for immediate feedback
+      setChar((prev) => ({
+        ...prev,
+        x: mouse.elementX,
+        y: mouse.elementY
+      }));
     }
   }, [websocket, mouse]);
 
@@ -48,7 +63,7 @@ function App() {
 
       <JoinGameMenu hidden={websocket.isConnected} onJoinGame={handleJoinGame} />
 
-      <PlayableMap ref={ref as React.RefObject<HTMLDivElement>} onMovement={handleMovement} hidden={!websocket.isConnected} />
+      <PlayableMap players={[char]} mouseRef={ref as React.RefObject<HTMLDivElement>} onMovement={handleMovement} hidden={!websocket.isConnected} />
     </>
   )
 }

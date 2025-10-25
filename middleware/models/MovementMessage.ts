@@ -7,7 +7,6 @@
 
 import * as z from "zod"; 
 
-
 /**
  * Interface representing a movement message with x and y coordinates.
  */
