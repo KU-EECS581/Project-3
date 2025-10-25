@@ -16,3 +16,5 @@ npm start
 This is what you should see after running `npm start`:
 
 ![Screenshot of a terminal after running the provided command(s)](../assets/images/backend_start.png)
+
+NOTE: Leave this running in a separate terminal than the frontend.
