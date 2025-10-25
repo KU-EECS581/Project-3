@@ -1,3 +1,9 @@
+/**
+ * @file PlayableMap.tsx
+ * @description Component representing the playable map area.
+ * @author Riley Meyerkorth
+ * @date 2025-10-25
+ */
 
 interface PlayableMapProps extends React.ComponentProps<'div'> {
     onMovement?: () => void;

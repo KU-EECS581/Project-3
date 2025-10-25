@@ -5,7 +5,7 @@
  * @date 2025-10-25
  */
 
-import type { User } from "../../models/User";
+import type { User } from "@models/index";
 
 export interface ServerConnectionRequest {
     host: string;

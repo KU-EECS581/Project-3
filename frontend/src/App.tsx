@@ -7,11 +7,9 @@
 
 import { useCallback, useState } from 'react'
 import './App.css'
-import { useGameServer } from './api/hooks/useGameServer'
-import { JoinGameMenu } from './components/JoinGameMenu';
-import type { ServerConnectionRequest } from './api';
+import { useGameServer, type ServerConnectionRequest } from '@api/index'
+import { JoinGameMenu, PlayableMap } from '@components/index';
 import { useMouse } from '@uidotdev/usehooks';
-import { PlayableMap } from './components';
 
 const DEFAULT_HOST = "localhost";
 const DEFAULT_PORT = -1; // Invalid port to force user input
