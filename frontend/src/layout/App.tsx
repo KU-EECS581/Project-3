@@ -8,7 +8,7 @@
 import './App.css'
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { RoutePath } from './enums';
-import { TitlePage, CreateCharacterPage, JoinGamePage } from './pages';
+import { TitlePage, CreateCharacterPage, JoinGamePage, GameWorldPage } from './pages';
 import { UserDataProvider, GameServerProvider } from '@/contexts';
 
 function App() {
@@ -28,7 +28,7 @@ function App() {
                     element={<JoinGamePage />} />
                 <Route
                     path={RoutePath.GAME_WORLD}
-                    element={<JoinGamePage />} />
+                    element={<GameWorldPage />} />
             </Routes>
         </BrowserRouter>
       </GameServerProvider>

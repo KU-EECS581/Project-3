@@ -14,7 +14,7 @@ interface PlayableMapProps extends React.HTMLAttributes<HTMLDivElement> {
     mouseRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export const PlayableMap = React.forwardRef<HTMLDivElement, PlayableMapProps>(({ onMovement, players, mouseRef, hidden}) => {
+export function PlayableMap({ onMovement, players, mouseRef, hidden }: PlayableMapProps) {
     // Positioning is relative to the map container
 
     return (
@@ -42,4 +42,4 @@ export const PlayableMap = React.forwardRef<HTMLDivElement, PlayableMapProps>(({
             ))}
         </div>
     );
-});
+}
