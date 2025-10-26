@@ -8,7 +8,12 @@
 import { createInterface } from 'readline';
 import { KEY_RESTART, KEY_SEE_CLIENTS, KEY_SEE_LOBBIES, KEY_SHUTDOWN } from './constants';
 import { GameServer } from './server';
+import dotenv from 'dotenv';
 
+// Configure environment variables
+dotenv.config();
+
+// Retrieve host and port from environment variables or use defaults
 const host = process.env.HOST || undefined;
 const port = process.env.PORT ? Number(process.env.PORT) : undefined;
 

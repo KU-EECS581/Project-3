@@ -5,7 +5,7 @@ import { MovementMessageSchema, type MovementMessage } from '../../middleware';
 export class GameServer {
     private host: string = DEFAULT_HOST;
     private port: number = DEFAULT_PORT;
-    private wss: WebSocketServer = new WebSocketServer({ port: this.port, host: this.host });
+    private wss: WebSocketServer;
     private clients: Set<WebSocket> = new Set();
     private lobbies: Map<string, WebSocket[]> = new Map();
     // Track last known position per user to sync state to newly connected clients
@@ -14,6 +14,7 @@ export class GameServer {
     constructor(host?: string, port?: number) {
         if (host) this.host = host;
         if (port) this.port = port;
+        this.wss = new WebSocketServer({ port: this.port, host: this.host });
         this.start();
     }
 
