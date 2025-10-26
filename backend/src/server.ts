@@ -1,6 +1,6 @@
 import WebSocket, { WebSocketServer } from 'ws';
 import { DEFAULT_HOST, DEFAULT_PORT } from './constants';
-import { MovementMessageSchema } from '../../middleware';
+import { MovementMessageSchema, type MovementMessage } from '../../middleware';
 
 export class GameServer {
     private host: string = DEFAULT_HOST;
@@ -8,6 +8,8 @@ export class GameServer {
     private wss: WebSocketServer = new WebSocketServer({ port: this.port, host: this.host });
     private clients: Set<WebSocket> = new Set();
     private lobbies: Map<string, WebSocket[]> = new Map();
+    // Track last known position per user to sync state to newly connected clients
+    private lastKnownPositions: Map<string, MovementMessage> = new Map();
 
     constructor(host?: string, port?: number) {
         if (host) this.host = host;
@@ -46,6 +48,17 @@ export class GameServer {
         });
 
         ws.send('Welcome to the WebSocket server!');
+
+        // Immediately sync existing player positions to the newcomer
+        try {
+            this.lastKnownPositions.forEach((movement) => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(movement));
+                }
+            });
+        } catch (e) {
+            console.error('Failed to sync existing players to new client:', e);
+        }
     }
 
     private processMessage(message: string, ws: WebSocket) {
@@ -65,6 +78,8 @@ export class GameServer {
         }
 
         const movement = result.data;
+        // Remember last known position for this user
+        this.lastKnownPositions.set(movement.user.name, movement);
         // Broadcast movement to all connected clients (including sender)
         const payload = JSON.stringify(movement);
         this.clients.forEach((client) => {

@@ -5,8 +5,9 @@
  * @date 2025-10-25
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MAX_PORT, MIN_PORT, type ServerConnectionRequest } from "@api/index";
+import { DEFAULT_CHARACTER_X, DEFAULT_CHARACTER_Y } from "@/constants";
 import type { MovementMessage } from "~middleware/models";
 import { MovementMessageSchema } from "~middleware/models";
 import type { PlayerCharacter } from "@/models";
@@ -26,6 +27,12 @@ export interface UseGameServerReturn {
 export function useGameServer(request: ServerConnectionRequest) {
     const [players, setPlayers] = useState<PlayerCharacter[]>([]);
     const [receivedMessages, /*setReceivedMessages*/] = useState<string[]>([]);
+    const userRef = useRef(request.user);
+
+    // Keep a ref to the latest user without retriggering socket effect
+    useEffect(() => {
+        userRef.current = request.user;
+    }, [request.user]);
 
     /**
      * Checks each part of the ServerConnectionRequest for validity.
@@ -138,9 +145,23 @@ export function useGameServer(request: ServerConnectionRequest) {
         const handleOpen = () => {
             console.log('WebSocket connection established');
             setReadyState(ws.readyState);
+
+            // Announce presence immediately so other clients see us without waiting for movement
+            try {
+                const currentUser = userRef.current;
+                if (currentUser) {
+                    // Use defaults on join; server will sync any last-known position
+                    const payload = JSON.stringify({ user: currentUser, x: DEFAULT_CHARACTER_X, y: DEFAULT_CHARACTER_Y });
+                    if (ws.readyState === WebSocket.OPEN) {
+                        ws.send(payload);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to send join presence message:', e);
+            }
         };
 
-        const handleMessage = (event: MessageEvent) => {
+    const handleMessage = (event: MessageEvent) => {
             // setReceivedMessages((prev) => [...prev, /* event.data */]);
             try {
                 const parsed = JSON.parse(event.data);
@@ -149,12 +170,7 @@ export function useGameServer(request: ServerConnectionRequest) {
                     const { user, x, y } = result.data;
                     setPlayers((prev) => {
                         const idx = prev.findIndex(p => p.user.name === user.name);
-                        const updated: PlayerCharacter = { user: {
-                            ...user,
-                            balance: 1000,
-                            dateCreated: new Date(),
-                            dateUpdated: new Date(),
-                        }, x, y };
+                        const updated: PlayerCharacter = { user, x, y };
                         if (idx >= 0) {
                             const copy = [...prev];
                             copy[idx] = updated;

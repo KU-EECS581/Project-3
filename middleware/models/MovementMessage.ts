@@ -13,6 +13,9 @@ import * as z from "zod";
 export interface MovementMessage {
     user: {
         name: string;
+        balance: number;
+        dateCreated: Date;
+        dateUpdated: Date;
     };
     x: number;
     y: number;
@@ -20,7 +23,11 @@ export interface MovementMessage {
  
 export const MovementMessageSchema = z.object({ 
   user: z.object({
-    name: z.string()
+    name: z.string(),
+    balance: z.number(),
+    // Accept either ISO strings or Date instances from the wire
+    dateCreated: z.coerce.date(),
+    dateUpdated: z.coerce.date(),
   }),
   x: z.number(),
   y: z.number()

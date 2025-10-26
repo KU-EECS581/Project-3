@@ -41,11 +41,17 @@ function App() {
     setRequest((prev) => ({
       ...prev,
       host,
-      port: Number(port)
+      port: Number(port),
+      // Bind the connection user to the created user if available
+      user: userData.user ?? prev.user,
     }));
 
     // Add our player locally so we render immediately on connect
-    websocket.addPlayer({ user: userData.user ?? DEFAULT_USER, x: DEFAULT_CHARACTER_X, y: DEFAULT_CHARACTER_Y });
+    if (userData.user) {
+      websocket.addPlayer({ user: userData.user, x: DEFAULT_CHARACTER_X, y: DEFAULT_CHARACTER_Y });
+    } else {
+      console.warn('Joining without a created player; movement may affect a default user. Create a player for individualized control.');
+    }
 
     console.log(`Joining server at ${host}:${port}...`)
   }, [websocket, userData]);
