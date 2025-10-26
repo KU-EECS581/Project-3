@@ -26,7 +26,7 @@ export const PlayableMap = React.forwardRef<HTMLDivElement, PlayableMapProps>(({
         >
             {players.map((player) => (
                 <div
-                    key={player.user.id}
+                    key={player.user.name}
                     style={{
                         position: 'absolute',
                         left: `${player.x}px`,

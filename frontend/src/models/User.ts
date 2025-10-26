@@ -5,7 +5,8 @@
  * @date 2025-10-25
  */
 
-/* The user model interface. Holds basic user information.
+/**
+ * The user model interface. Holds basic user information.
  */
 export interface User {
     name: string;
