@@ -1,3 +1,10 @@
+/**
+ * @file constants.ts
+ * @description Constants for the backend.
+ * @author Riley Meyerkorth
+ * @date 2025-10-25
+ */
+
 export const KEY_RESTART = 'r';
 export const KEY_SHUTDOWN = 'q';
 export const KEY_SEE_CLIENTS = 'c';

@@ -1,8 +1,8 @@
 /**
  * @file index.ts
- * @description Simple HTTP server for the backend. Placeholder for future backend functionality.
+ * @description Entry point for the backend.
  * @author Riley Meyerkorth
- * @date 2025-10-24
+ * @date 2025-10-25
  */
 
 import { createInterface } from 'readline';

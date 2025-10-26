@@ -1,3 +1,10 @@
+/**
+ * @file server.ts
+ * @description Simple WebSocket server for the backend.
+ * @author Riley Meyerkorth
+ * @date 2025-10-25
+ */
+
 import WebSocket, { WebSocketServer } from 'ws';
 import { DEFAULT_HOST, DEFAULT_PORT } from './constants';
 import { MovementMessageSchema, type MovementMessage } from '../../middleware';
