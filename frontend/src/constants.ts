@@ -5,7 +5,7 @@
  * @date 2025-10-25
  */
 
-import type { User } from "./models";
+import type { User } from "~middleware/models";
 
 export const USER_DATA_KEY = "userData";
 export const DEFAULT_HOST = "localhost";

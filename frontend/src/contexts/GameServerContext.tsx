@@ -22,6 +22,9 @@ export interface GameServerContextProps {
     addPlayer: (player: PlayerCharacter) => void;
     setRequest: React.Dispatch<React.SetStateAction<ServerConnectionRequest>>;
     disconnect: () => void;
+    host: string;
+    port: number;
+    error: string | undefined;
 }
 
 export const GameServerContext = createContext<GameServerContextProps | undefined>(undefined);

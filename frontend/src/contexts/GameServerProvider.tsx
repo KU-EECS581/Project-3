@@ -17,7 +17,8 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         host: DEFAULT_HOST,
         port: DEFAULT_PORT,
         user: DEFAULT_USER
-    })
+    });
+    const [error, setError] = useState<string | undefined>(undefined);
     const [players, setPlayers] = useState<PlayerCharacter[]>([]);
     const [receivedMessages, /*setReceivedMessages*/] = useState<string[]>([]);
     const userRef = useRef(request.user);
@@ -35,21 +36,25 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         // Validate host
         if (!request.host) {
             console.error(`Invalid host: ${request.host}`);
+            setError('Invalid host');
             return false;
         }
 
         // Validate port
         if (isNaN(request.port) || request.port < MIN_PORT || request.port > MAX_PORT) {
             console.error(`Invalid port: ${request.port}`);
+            setError('Invalid port');
             return false;
         }
 
         // Validate user
         if (!request.user || !request.user.name) {
             console.error(`Invalid user data`);
+            setError('Invalid user data');
             return false;
         }
 
+        setError(undefined);
         return true;
     }, [request]);
 
@@ -62,6 +67,7 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         try {
             return new WebSocket(`ws://${request.host}:${request.port}`);
         } catch (err) {
+            setError(`Failed to create WebSocket: ${err}`);
             console.error('Failed to create WebSocket:', err);
             return undefined;
         }
@@ -71,10 +77,10 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
     const [readyState, setReadyState] = useState<number | undefined>(ws?.readyState);
 
     // Derived booleans from readyState (stable values causing re-renders when readyState updates)
-    const isConnecting = useMemo(() => readyState === WebSocket.CONNECTING, [readyState]);
-    const isConnected = useMemo(() => readyState === WebSocket.OPEN, [readyState]);
-    const isClosing = useMemo(() => readyState === WebSocket.CLOSING, [readyState]);
-    const isClosed = useMemo(() => readyState === WebSocket.CLOSED, [readyState]);
+    const isConnecting = useMemo(() => readyState === WebSocket.CONNECTING && ws !== undefined, [readyState, ws]);
+    const isConnected = useMemo(() => readyState === WebSocket.OPEN && ws !== undefined, [readyState, ws]);
+    const isClosing = useMemo(() => readyState === WebSocket.CLOSING && ws !== undefined, [readyState, ws]);
+    const isClosed = useMemo(() => readyState === WebSocket.CLOSED || ws === undefined, [readyState, ws]);
 
     /**
      * Closes the WebSocket connection if open or connecting.
@@ -193,7 +199,12 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             setReadyState(ws.readyState);
         };
 
-        const handleClose = () => {
+        const handleClose = (event: CloseEvent) => {
+            if (!event.wasClean) {
+                console.error(`WebSocket closed unexpectedly: Code ${event.code}, Reason: ${event.reason ?? 'No reason provided'}`);
+                setError(`WebSocket closed unexpectedly: Code ${event.code}, Reason: ${event.reason ?? 'No reason provided'}`);
+            }
+
             console.log('WebSocket connection closed');
             setReadyState(ws.readyState);
         };
@@ -245,6 +256,9 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             addPlayer,
             setRequest,
             disconnect,
+            host: request.host,
+            port: request.port,
+            error
         }}>
             {children}
         </GameServerContext.Provider>

@@ -9,7 +9,7 @@ import { useGameServer } from "@/api";
 import { JoinGameMenu } from "@/components";
 import { DEFAULT_CHARACTER_X, DEFAULT_CHARACTER_Y } from "@/constants";
 import { useUserData } from "@/hooks";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { RoutePath } from "../enums";
 
@@ -36,17 +36,31 @@ export function JoinGamePage() {
         }
 
         console.log(`Joining server at ${host}:${port}...`)
+    }, [server, userData]);
 
-        // Navigate to the game world page
-        navigate(RoutePath.GAME_WORLD);
-    }, [server, userData, navigate]);
+    useEffect(() => {
+        // If already connected, go to game world
+        if (server.isConnected) {
+            navigate(RoutePath.GAME_WORLD);
+            return;
+        }
+
+        // If connecting, stay on this page
+        if (server.isConnecting) {
+            return;
+        }
+    }, [server, navigate]);
 
     return (
         <>
+            <h2>Join a Server</h2>
             <JoinGameMenu
                 hidden={server.isConnected}
+                disabled={server.isConnecting}
                 onJoinGame={handleJoinGame}
                 />
+            {server.isConnecting && <h2>Connecting to {server.host}:{server.port}...</h2>}
+            {server.error && <h3 style={{ color: 'red' }}>Error: {server.error}</h3>}
         </>
     );
 }

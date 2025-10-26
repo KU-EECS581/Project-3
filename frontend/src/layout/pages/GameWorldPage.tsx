@@ -9,7 +9,7 @@ import { useGameServer } from "@/api";
 import { PlayableMap } from "@/components";
 import type { PlayerCharacter } from "@/models";
 import { useMouse } from "@uidotdev/usehooks";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { RoutePath } from "../enums";
 
@@ -26,9 +26,34 @@ export function GameWorldPage() {
 
   const handleDisconnect = useCallback(() => {
     server.disconnect();
-    navigate(RoutePath.HOME);
+  }, [server]);
+
+  useEffect(() => {
+    if (server.isClosed) {
+      navigate(RoutePath.HOME);
+      return;
+    }
   }, [server, navigate]);
 
+  // Show connecting state
+  // TODO: Better loading visualization or component
+  if (server.isConnecting) {
+    return <h2>Connecting to {server.host}:{server.port}...</h2>;
+  }
+
+  // Show disconnecting state
+  // TODO: Better loading visualization or component
+  if (server.isClosing) {
+    return <h2>Disconnecting...</h2>;
+  }
+
+  // Redirect to home if disconnected  
+  // if (server.isClosed) {
+  //   navigate(RoutePath.HOME);
+  //   return null;
+  // }
+
+  // Iff connected, show the game world
   return (
       <>
           <PlayableMap
