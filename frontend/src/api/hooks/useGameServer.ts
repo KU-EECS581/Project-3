@@ -45,7 +45,7 @@ export function useGameServer(request: ServerConnectionRequest) {
         }
 
         // Validate user
-        if (!request.user || !request.user.id || !request.user.name) {
+        if (!request.user || !request.user.name) {
             console.error(`Invalid user data`);
             return false;
         }
@@ -104,7 +104,7 @@ export function useGameServer(request: ServerConnectionRequest) {
 
         // Optimistic update locally
         setPlayers((prev) => {
-            const idx = prev.findIndex(p => p.user.id === request.user.id);
+            const idx = prev.findIndex(p => p.user.name === request.user.name);
             const updated: PlayerCharacter = { user: request.user, x: movement.x, y: movement.y };
             if (idx >= 0) {
                 const copy = [...prev];
@@ -119,7 +119,7 @@ export function useGameServer(request: ServerConnectionRequest) {
 
     const addPlayer = useCallback((player: PlayerCharacter) => {
         setPlayers((prev) => {
-            const exists = prev.some(p => p.user.id === player.user.id);
+            const exists = prev.some(p => p.user.name === player.user.name);
             if (exists) return prev;
             return [...prev, player];
         });
@@ -148,8 +148,13 @@ export function useGameServer(request: ServerConnectionRequest) {
                 if (result.success) {
                     const { user, x, y } = result.data;
                     setPlayers((prev) => {
-                        const idx = prev.findIndex(p => p.user.id === user.id);
-                        const updated: PlayerCharacter = { user, x, y };
+                        const idx = prev.findIndex(p => p.user.name === user.name);
+                        const updated: PlayerCharacter = { user: {
+                            ...user,
+                            balance: 1000,
+                            dateCreated: new Date(),
+                            dateUpdated: new Date(),
+                        }, x, y };
                         if (idx >= 0) {
                             const copy = [...prev];
                             copy[idx] = updated;

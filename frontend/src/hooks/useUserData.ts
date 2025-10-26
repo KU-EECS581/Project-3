@@ -1,3 +1,10 @@
+/**
+ * @file useUserData.ts
+ * @description Custom hook for managing user data.
+ * @author Riley Meyerkorth
+ * @date 2025-10-25
+ */
+
 import { useCallback, useMemo, useState } from "react";
 import type { User } from "../models";
 import { USER_DATA_KEY } from "../constants";

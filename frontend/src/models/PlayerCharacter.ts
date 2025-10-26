@@ -1,3 +1,10 @@
+/**
+ * @file PlayerCharacter.ts
+ * @description Barrel file for player character models.
+ * @author Riley Meyerkorth
+ * @date 2025-10-25
+ */
+
 import type { User } from "./User";
 
 export interface PlayerCharacter {

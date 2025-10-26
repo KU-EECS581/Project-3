@@ -45,10 +45,10 @@ function App() {
     }));
 
     // Add our player locally so we render immediately on connect
-    websocket.addPlayer({ user: DEFAULT_USER, x: DEFAULT_CHARACTER_X, y: DEFAULT_CHARACTER_Y });
+    websocket.addPlayer({ user: userData.user ?? DEFAULT_USER, x: DEFAULT_CHARACTER_X, y: DEFAULT_CHARACTER_Y });
 
     console.log(`Joining server at ${host}:${port}...`)
-  }, [websocket]);
+  }, [websocket, userData]);
 
   const handleMovement = useCallback(() => {
     if (websocket.isConnected) {

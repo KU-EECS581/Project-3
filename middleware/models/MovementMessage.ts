@@ -12,7 +12,6 @@ import * as z from "zod";
  */
 export interface MovementMessage {
     user: {
-        id: string;
         name: string;
     };
     x: number;
@@ -21,7 +20,6 @@ export interface MovementMessage {
  
 export const MovementMessageSchema = z.object({ 
   user: z.object({
-    id: z.string(),
     name: z.string()
   }),
   x: z.number(),
