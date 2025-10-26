@@ -5,7 +5,7 @@
  * @date 2025-10-25
  */
 
-import type { User } from "@models/index";
+import type { User } from "~middleware/index";
 
 export interface ServerConnectionRequest {
     host: string;

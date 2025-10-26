@@ -5,5 +5,4 @@
  * @date 2025-10-25
  */
 
-export * from './User';
 export * from './PlayerCharacter';

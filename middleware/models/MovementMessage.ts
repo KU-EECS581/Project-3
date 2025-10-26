@@ -6,29 +6,19 @@
  */
 
 import * as z from "zod"; 
+import { UserSchema, type User } from "./User";
 
 /**
  * Interface representing a movement message with x and y coordinates.
  */
 export interface MovementMessage {
-    user: {
-        name: string;
-        balance: number;
-        dateCreated: Date;
-        dateUpdated: Date;
-    };
+    user: User;
     x: number;
     y: number;
 }
  
 export const MovementMessageSchema = z.object({ 
-  user: z.object({
-    name: z.string(),
-    balance: z.number(),
-    // Accept either ISO strings or Date instances from the wire
-    dateCreated: z.coerce.date(),
-    dateUpdated: z.coerce.date(),
-  }),
+  user: UserSchema,
   x: z.number(),
   y: z.number()
 });

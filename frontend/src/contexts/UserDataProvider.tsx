@@ -6,7 +6,7 @@
  */
 
 import { USER_DATA_KEY } from "@/constants";
-import type { User } from "@/models";
+import type { User } from "~middleware/index";
 import { useState, useCallback, useMemo } from "react";
 import { UserDataContext } from "./UserDataContext";
 

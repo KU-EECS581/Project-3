@@ -5,7 +5,7 @@
  * @date 2025-10-26
  */
 
-import type { User } from "@/models";
+import type { User } from "~middleware/index";
 import { createContext } from "react";
 
 export interface UserDataContextProps {

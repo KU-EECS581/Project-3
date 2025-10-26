@@ -6,3 +6,5 @@
  */
 
 export * from './MovementMessage';
+export * from './JoinPokerMessage';
+export * from './User';
