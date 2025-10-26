@@ -7,11 +7,12 @@
 
 import * as z from "zod"; 
 import { UserSchema, type User } from "./User";
+import type { GameMessage } from "./GameMessage";
 
 /**
  * Interface representing a message for joining a poker game.
  */
-export interface JoinPokerMessage {
+export interface JoinPokerMessage extends GameMessage {
     user: User;
     gameId: string;
 }
