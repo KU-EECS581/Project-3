@@ -8,3 +8,4 @@
 export * from './MovementMessage';
 export * from './JoinPokerMessage';
 export * from './User';
+export * from './GameMessage';

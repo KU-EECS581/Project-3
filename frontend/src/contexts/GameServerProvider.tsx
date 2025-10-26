@@ -10,7 +10,8 @@ import { GameServerContext } from "./GameServerContext";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_CHARACTER_X, DEFAULT_CHARACTER_Y, DEFAULT_HOST, DEFAULT_PORT, DEFAULT_USER } from "@/constants";
 import type { PlayerCharacter } from "@/models";
-import { type MovementMessage, MovementMessageSchema } from "~middleware/models";
+import { AnyGameMessageSchema, MESSAGE_VERSION, type MovementMessage, MovementMessageSchema } from "~middleware/models";
+import { GameMessageKey } from "~middleware/enums";
 
 export function GameServerProvider({children}: {children: React.ReactNode}) {
     const [request, setRequest] = useState<ServerConnectionRequest>({
@@ -119,6 +120,12 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
     const sendMovement = useCallback((movement: Omit<MovementMessage, "user">) => {
         if (!request.user) return;
         const payload: MovementMessage = { user: request.user, ...movement };
+        const envelope = {
+            key: GameMessageKey.MOVE,
+            v: MESSAGE_VERSION,
+            payload,
+            ts: Date.now(),
+        } as const;
 
         // Optimistic update locally
         setPlayers((prev) => {
@@ -132,7 +139,7 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             return [...prev, updated];
         });
 
-        sendMessage(JSON.stringify(payload));
+        sendMessage(JSON.stringify(envelope));
     }, [sendMessage, request.user, setPlayers]);
 
     const addPlayer = useCallback((player: PlayerCharacter) => {
@@ -162,9 +169,14 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
                 const currentUser = userRef.current;
                 if (currentUser) {
                     // Use defaults on join; server will sync any last-known position
-                    const payload = JSON.stringify({ user: currentUser, x: DEFAULT_CHARACTER_X, y: DEFAULT_CHARACTER_Y });
+                    const envelope = {
+                        key: GameMessageKey.MOVE,
+                        v: MESSAGE_VERSION,
+                        payload: { user: currentUser, x: DEFAULT_CHARACTER_X, y: DEFAULT_CHARACTER_Y } satisfies MovementMessage,
+                        ts: Date.now(),
+                    } as const;
                     if (ws.readyState === WebSocket.OPEN) {
-                        ws.send(payload);
+                        ws.send(JSON.stringify(envelope));
                     }
                 }
             } catch (e) {
@@ -176,22 +188,29 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             // setReceivedMessages((prev) => [...prev, /* event.data */]);
             try {
                 const parsed = JSON.parse(event.data);
-                const result = MovementMessageSchema.safeParse(parsed);
-                if (result.success) {
-                    const { user, x, y } = result.data;
-                    setPlayers((prev) => {
-                        const idx = prev.findIndex(p => p.user.name === user.name);
-                        const updated: PlayerCharacter = { user, x, y };
-                        if (idx >= 0) {
-                            const copy = [...prev];
-                            copy[idx] = updated;
-                            return copy;
+                // Prefer new envelope format
+                const env = AnyGameMessageSchema.safeParse(parsed);
+                if (env.success) {
+                    const msg = env.data;
+                    if (msg.key === GameMessageKey.MOVE) {
+                        const payload = MovementMessageSchema.safeParse(msg.payload);
+                        if (payload.success) {
+                            const { user, x, y } = payload.data;
+                            setPlayers((prev) => {
+                                const idx = prev.findIndex(p => p.user.name === user.name);
+                                const updated: PlayerCharacter = { user, x, y };
+                                if (idx >= 0) {
+                                    const copy = [...prev];
+                                    copy[idx] = updated;
+                                    return copy;
+                                }
+                                return [...prev, updated];
+                            });
                         }
-                        return [...prev, updated];
-                    });
+                    }
                 } else {
-                    // Not a movement message; ignore for now
-                    // console.debug('Non-movement message received');
+                    // Non-envelope message; ignore for now
+                    console.warn('Received non-envelope message:', parsed);
                 }
             } catch {
                 // Non-JSON; ignore

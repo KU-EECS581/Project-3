@@ -7,7 +7,7 @@
 
 import WebSocket, { WebSocketServer } from 'ws';
 import { DEFAULT_HOST, DEFAULT_PORT } from './constants';
-import { MovementMessageSchema, type MovementMessage } from '../../middleware';
+import { AnyGameMessageSchema, GameMessageKey, MESSAGE_VERSION, MovementMessageSchema, type MovementMessage } from '../../middleware';
 
 export class GameServer {
     private host: string = DEFAULT_HOST;
@@ -61,7 +61,13 @@ export class GameServer {
         try {
             this.lastKnownPositions.forEach((movement) => {
                 if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify(movement));
+                    const envelope = {
+                        key: GameMessageKey.MOVE,
+                        v: MESSAGE_VERSION,
+                        payload: movement,
+                        ts: Date.now(),
+                    } as const;
+                    ws.send(JSON.stringify(envelope));
                 }
             });
         } catch (e) {
@@ -79,17 +85,45 @@ export class GameServer {
             return;
         }
 
-        const result = MovementMessageSchema.safeParse(parsed);
-        if (!result.success) {
-            console.error('Invalid message format:', result.error);
-            return;
+        // Prefer new envelope format; warn and ignore legacy raw movement
+        let movement: MovementMessage | undefined;
+        const maybeEnvelope = AnyGameMessageSchema.safeParse(parsed);
+        if (!maybeEnvelope.success) {
+            const legacy = MovementMessageSchema.safeParse(parsed);
+            if (!legacy.success) {
+                console.error('Invalid message format (neither envelope nor legacy movement):', legacy.error);
+                return;
+            }
+            movement = legacy.data;
         }
 
-        const movement = result.data;
+        // Process envelope message
+        const envelope = maybeEnvelope.data;
+        switch (envelope?.key) {
+            case GameMessageKey.MOVE:
+                    const payloadResult = MovementMessageSchema.safeParse(envelope.payload);
+                if (!payloadResult.success) {
+                    console.error('Invalid MOVE payload:', payloadResult.error);
+                    return;
+                }
+                movement = payloadResult.data;
+                break;
+            default:
+                // Ignore other message types for now
+                return;
+        }
+
+        if (!movement) return;
         // Remember last known position for this user
         this.lastKnownPositions.set(movement.user.name, movement);
+        
         // Broadcast movement to all connected clients (including sender)
-        const payload = JSON.stringify(movement);
+        const payload = JSON.stringify({
+            key: GameMessageKey.MOVE,
+            v: MESSAGE_VERSION,
+            payload: movement,
+            ts: Date.now(),
+        });
         this.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(payload);

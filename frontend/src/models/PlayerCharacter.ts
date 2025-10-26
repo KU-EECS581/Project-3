@@ -5,7 +5,7 @@
  * @date 2025-10-25
  */
 
-import type { User } from "./User";
+import type { User } from "~middleware/models";
 
 export interface PlayerCharacter {
     user: User;

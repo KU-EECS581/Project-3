@@ -1,17 +1,54 @@
 /**
  * @file GameMessage.ts
- * @description Represents a generic game message.
+ * @description Generic, versioned WebSocket message envelope with typed payload.
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */
 
-import z from 'zod';
-import { GameMessageKey, type GameMessageKeyType } from "../enums";
+import * as z from 'zod';
+import { GameMessageKeys, type GameMessageKeyType } from "../enums";
+import { MovementMessageSchema, type MovementMessage } from './MovementMessage';
+import { JoinPokerMessageSchema, type JoinPokerMessage } from './JoinPokerMessage';
 
-export interface GameMessage {
-    key: GameMessageKeyType;
+export const MESSAGE_VERSION = 1 as const;
+
+// Base envelope (without payload shape)
+export interface GameMessage<P = unknown, K extends GameMessageKeyType = GameMessageKeyType> {
+    key: K;
+    v: typeof MESSAGE_VERSION;
+    payload: P;
+    ts?: number; // epoch ms
+    requestId?: string; // optional correlation id (uuid)
+    lobbyId?: string; // optional lobby routing
 }
 
-export const GameMessageSchema = z.object({
-    key: z.enum(GameMessageKey)
+export const GameMessageBaseSchema = z.object({
+    key: z.enum(GameMessageKeys),
+    v: z.literal(MESSAGE_VERSION),
+    ts: z.number().optional(),
+    requestId: z.string().uuid().optional(),
+    lobbyId: z.string().optional(),
 });
+
+// Any message (unknown payload)
+export const AnyGameMessageSchema = GameMessageBaseSchema.extend({
+    payload: z.unknown(),
+});
+
+// Helper to create a typed schema for a specific key + payload schema
+export function createGameMessageSchema<
+    P extends z.ZodTypeAny,
+    K extends GameMessageKeyType
+>(key: K, payloadSchema: P) {
+    return GameMessageBaseSchema.extend({
+        key: z.literal(key),
+        payload: payloadSchema,
+    });
+}
+
+// Typed message helpers for common messages
+export type MoveGameMessage = GameMessage<MovementMessage, 'MOVE'>;
+export const MoveGameMessageSchema = createGameMessageSchema('MOVE', MovementMessageSchema);
+
+export type JoinPokerGameMessage = GameMessage<JoinPokerMessage, 'JOIN_POKER'>;
+export const JoinPokerGameMessageSchema = createGameMessageSchema('JOIN_POKER', JoinPokerMessageSchema);
