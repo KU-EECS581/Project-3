@@ -11,12 +11,9 @@ import { useGameServer, type ServerConnectionRequest } from '@api/index'
 import { JoinGameMenu, PlayableMap } from '@components/index';
 import { useMouse } from '@uidotdev/usehooks';
 import type { PlayerCharacter } from './models';
-
-const DEFAULT_HOST = "localhost";
-const DEFAULT_PORT = -1; // Invalid port to force user input
-const DEFAULT_USER = { id: 'user1', name: 'Player1' }; // Placeholder user
-const DEFAULT_CHARACTER_X = 50;
-const DEFAULT_CHARACTER_Y = 50;
+import { useUserData } from './hooks';
+import { CreatePlayerForm } from './components/CreatePlayerForm';
+import { DEFAULT_CHARACTER_X, DEFAULT_CHARACTER_Y, DEFAULT_HOST, DEFAULT_PORT, DEFAULT_USER } from './constants';
 
 function App() {
   const [mouse, ref] = useMouse();
@@ -28,6 +25,17 @@ function App() {
     user: DEFAULT_USER
   });
   const websocket = useGameServer(request);
+
+  const userData = useUserData();
+
+  const handleCreatePlayer = useCallback((name: string) => {
+    console.log("Creating player with name:", name);
+    userData.saveUser({ name: name, balance: 1000, dateCreated: new Date(), dateUpdated: new Date() });
+  }, [userData]);
+
+  const handleResetPlayer = useCallback(() => {
+    userData.clearUser();
+  }, [userData]);
 
   const handleJoinGame = useCallback((host: string, port: number) => {
     setRequest((prev) => ({
@@ -52,6 +60,8 @@ function App() {
     <>
       <h1>EECS 581 - Casino</h1>
 
+      <CreatePlayerForm hidden={userData.exists} onCreatePlayer={handleCreatePlayer} />
+
       <JoinGameMenu
         hidden={websocket.isConnected}
         onJoinGame={handleJoinGame}
@@ -63,6 +73,8 @@ function App() {
         onMovement={handleMovement}
         hidden={!websocket.isConnected}
       />
+
+      <button onClick={handleResetPlayer}>Reset Player Data</button>
     </>
   )
 }

@@ -7,3 +7,4 @@
 
 export * from './JoinGameMenu';
 export * from './PlayableMap';
+export * from './CreatePlayerForm';
