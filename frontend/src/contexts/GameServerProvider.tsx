@@ -190,9 +190,15 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
                 const parsed = JSON.parse(event.data);
                 // Prefer new envelope format
                 const env = AnyGameMessageSchema.safeParse(parsed);
-                if (env.success) {
-                    const msg = env.data;
-                    if (msg.key === GameMessageKey.MOVE) {
+                if (!env.success) {
+                    // Non-envelope message; ignore for now
+                    console.warn('Received non-envelope message:', parsed);
+                    return;
+                }
+
+                const msg = env.data;
+                switch (msg.key) {
+                    case GameMessageKey.MOVE: {
                         const payload = MovementMessageSchema.safeParse(msg.payload);
                         if (payload.success) {
                             const { user, x, y } = payload.data;
@@ -207,10 +213,12 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
                                 return [...prev, updated];
                             });
                         }
+                        break;
                     }
-                } else {
-                    // Non-envelope message; ignore for now
-                    console.warn('Received non-envelope message:', parsed);
+                    default:
+                        // Ignore other message types for now
+                        console.warn('Received unhandled message key:', msg.key);
+                        break;
                 }
             } catch {
                 // Non-JSON; ignore
