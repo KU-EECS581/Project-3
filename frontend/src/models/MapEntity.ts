@@ -12,6 +12,7 @@ export interface MapEntity {
     name: string;
     type: 'shop' | 'game' | 'other';
     spritePath?: string;
+    route?: string;
     
     pos: MapPosition;
     size: MapEntitySize;

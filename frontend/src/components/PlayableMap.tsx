@@ -5,7 +5,7 @@
  * @date 2025-10-25
  */
 
-import { CHARACTER_HEIGHT, CHARACTER_WIDTH, MAP_ENTITIES, MAP_HEIGHT, MAP_WIDTH } from "@/constants";
+import { CHARACTER_HEIGHT, CHARACTER_MOVEMENT_DELAY_MS, CHARACTER_WIDTH, MAP_ENTITIES, MAP_HEIGHT, MAP_WIDTH } from "@/constants";
 import type { MapEntity, PlayerCharacter } from "@/models";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
@@ -26,6 +26,32 @@ export function PlayableMap({ onMovement, players, mouseRef, hidden, self, onEnt
 
     // Track which entities we're currently inside to avoid re-firing events (ref avoids rerenders)
     const activeEntityNamesRef = useRef<Set<string>>(new Set());
+
+    // Track animated positions for each player
+    const [animatedPositions, setAnimatedPositions] = useState<Map<string, { x: number; y: number }>>(new Map());
+
+    // Update animated positions when players change
+    useEffect(() => {
+        setAnimatedPositions((prev) => {
+            const updated = new Map(prev);
+            for (const player of players) {
+                // Initialize position if player is new
+                if (!updated.has(player.user.name)) {
+                    updated.set(player.user.name, { x: player.x, y: player.y });
+                } else {
+                    // Update to new position (CSS transition will animate)
+                    updated.set(player.user.name, { x: player.x, y: player.y });
+                }
+            }
+            // Remove players that are no longer in the game
+            for (const name of updated.keys()) {
+                if (!players.find(p => p.user.name === name)) {
+                    updated.delete(name);
+                }
+            }
+            return updated;
+        });
+    }, [players]);
 
     const selfRect = useMemo(() => {
         if (!self) return undefined;
@@ -121,22 +147,26 @@ export function PlayableMap({ onMovement, players, mouseRef, hidden, self, onEnt
                 </div>
             ))}
 
-            {players.map((player) => (
-                <div
-                    key={player.user.name}
-                    style={{
-                        position: 'absolute',
-                        left: `${player.x}px`,
-                        top: `${player.y}px`,
-                        width: `${CHARACTER_WIDTH}px`,
-                        height: `${CHARACTER_HEIGHT}px`,
-                        backgroundColor: 'blue',
-                        color: 'white',
-                    }}
-                >
-                    {player.user.name}
-                </div>
-            ))}
+            {players.map((player) => {
+                const animatedPos = animatedPositions.get(player.user.name) || { x: player.x, y: player.y };
+                return (
+                    <div
+                        key={player.user.name}
+                        style={{
+                            position: 'absolute',
+                            left: `${animatedPos.x}px`,
+                            top: `${animatedPos.y}px`,
+                            width: `${CHARACTER_WIDTH}px`,
+                            height: `${CHARACTER_HEIGHT}px`,
+                            backgroundColor: 'blue',
+                            color: 'white',
+                            transition: `left ${CHARACTER_MOVEMENT_DELAY_MS}ms ease-in-out, top ${CHARACTER_MOVEMENT_DELAY_MS}ms ease-in-out`,
+                        }}
+                    >
+                        {player.user.name}
+                    </div>
+                );
+            })}
         </div>
     );
 }

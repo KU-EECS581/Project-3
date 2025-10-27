@@ -13,8 +13,7 @@ import { useMouse } from "@uidotdev/usehooks";
 import { useCallback, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { RoutePath } from "../enums";
-import { MapEntityKey } from "@/enums";
-import { DEFAULT_CHARACTER_X, DEFAULT_CHARACTER_Y } from "@/constants";
+import { CHARACTER_MOVEMENT_DELAY_MS, DEFAULT_CHARACTER_X, DEFAULT_CHARACTER_Y } from "@/constants";
 
 export function GameWorldPage() {
   const [mouse, ref] = useMouse();
@@ -49,32 +48,14 @@ export function GameWorldPage() {
     if (navigatingRef.current) return;
     if (location.pathname === RoutePath.JOIN_GAME) return;
 
-    // Move player to spawn point of map
-    server.sendMovement({ x: DEFAULT_CHARACTER_X, y: DEFAULT_CHARACTER_Y });
+    // Delay navigation to allow movement to register
+    setTimeout(() => {
+      // Move player to spawn point of map to avoid infinite collisions
+      server.sendMovement({ x: DEFAULT_CHARACTER_X, y: DEFAULT_CHARACTER_Y });
 
-    // Basic routing/actions per entity type
-    switch (entity.key) {
-      case MapEntityKey.GAME_SLOTS:
-        navigatingRef.current = true;
-        navigate(RoutePath.MAP_SLOTS);
-        break;
-      case MapEntityKey.GAME_POKER:
-        navigatingRef.current = true;
-        navigate(RoutePath.MAP_POKER);
-        break;
-      case MapEntityKey.GAME_BLACKJACK:
-        navigatingRef.current = true;
-        navigate(RoutePath.MAP_BLACKJACK);
-        break;
-      case MapEntityKey.SHOP:
-        navigatingRef.current = true;
-        navigate(RoutePath.MAP_SHOP);
-        break;
-      case MapEntityKey.BANK:
-        navigatingRef.current = true;
-        navigate(RoutePath.MAP_BANK);
-        break;
-    }
+      navigatingRef.current = true;
+      navigate(entity.route ?? RoutePath.MAP);
+    }, CHARACTER_MOVEMENT_DELAY_MS);
 
     // Placeholder for other entity types
     console.log(`Entered entity: ${entity.name} (${entity.type})`);

@@ -8,11 +8,14 @@
 import type { User } from "~middleware/models";
 import type { MapEntity, MapEntitySize } from "./models";
 import { MapEntityKey } from "./enums";
+import { RoutePath } from "./layout/enums";
 
 export const USER_DATA_KEY = "userData";
 export const DEFAULT_HOST = "localhost";
 export const DEFAULT_PORT = -1; // Invalid port to force user input
 export const DEFAULT_USER: User = { name: 'Player1', balance: 1000, dateCreated: new Date(), dateUpdated: new Date() }; // Placeholder user
+
+export const CHARACTER_MOVEMENT_DELAY_MS = 500;
 export const CHARACTER_WIDTH = 32;
 export const CHARACTER_HEIGHT = 32;
 
@@ -33,7 +36,17 @@ export const MAP_ENTITIES: MapEntity[] = [
         name: "Shop",
         type: "shop",
         spritePath: "/assets/sprites/shop.png",
+        route: RoutePath.MAP_SHOP,
         pos: { x: 100, y: 100 },
+        size: DEFAULT_MAP_ENTITY_SIZE,
+    },
+    {
+        key: MapEntityKey.BANK,
+        name: "Bank",
+        type: "shop",
+        spritePath: "/assets/sprites/bank.png",
+        route: RoutePath.MAP_BANK,
+        pos: { x: 100, y: 400 },
         size: DEFAULT_MAP_ENTITY_SIZE,
     },
     {
@@ -41,6 +54,7 @@ export const MAP_ENTITIES: MapEntity[] = [
         name: "Poker Table",
         type: "game",
         spritePath: "/assets/sprites/poker_table.png",
+        route: RoutePath.MAP_POKER,
         pos: { x: 125, y: 300 },
         size: DEFAULT_MAP_ENTITY_SIZE,
     },
@@ -49,6 +63,7 @@ export const MAP_ENTITIES: MapEntity[] = [
         name: "Blackjack Table",
         type: "game",
         spritePath: "/assets/sprites/blackjack_table.png",
+        route: RoutePath.MAP_BLACKJACK,
         pos: { x: 700, y: 200 },
         size: DEFAULT_MAP_ENTITY_SIZE,
     },
@@ -57,6 +72,7 @@ export const MAP_ENTITIES: MapEntity[] = [
         name: "Slot Machine",
         type: "game",
         spritePath: "/assets/sprites/slot_machine.png",
+        route: RoutePath.MAP_SLOTS,
         pos: { x: 600, y: 500 },
         size: DEFAULT_MAP_ENTITY_SIZE,
     }
