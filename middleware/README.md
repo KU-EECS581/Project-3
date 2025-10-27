@@ -2,6 +2,12 @@
 
 This package holds shared types and schemas used by the frontend and backend. It now includes a small, versioned envelope to differentiate WebSocket messages.
 
+## Startup Instructions
+
+```bash
+npm install
+```
+
 ## Envelope shape
 
 - key: message discriminator (one of `GameMessageKeys`)

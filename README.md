@@ -13,4 +13,5 @@ Note that all work should be done in branches of the `dev` branch. The `main` br
 The startup instructions for the frontend and backend can be found in their respective READMEs:
 
 - [Frontend Startup](frontend/README.md#startup-instructions)
+- [Middleware Startup](middleware/README.md#startup-instructions) (note that you do not "start" the middleware, you mainly just install the dependencies)
 - [Backend Startup](backend/README.md#startup-instructions)
