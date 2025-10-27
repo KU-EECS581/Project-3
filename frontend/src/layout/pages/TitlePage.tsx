@@ -12,7 +12,6 @@ import { useCallback } from "react";
 import { useNavigate } from "react-router";
 import { RoutePath } from "../enums";
 import casinoImage from "@/assets/home/casino-cavern.png";
-import "@styles/global.css";
 
 export function TitlePage() {
   const userData = useUserData();

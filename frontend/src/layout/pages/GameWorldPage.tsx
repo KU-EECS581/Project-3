@@ -10,7 +10,7 @@ import { PlayableMap } from "@/components";
 import type { MapEntity, PlayerCharacter } from "@/models";
 import { useUserData } from "@/hooks";
 import { useMouse } from "@uidotdev/usehooks";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { RoutePath } from "../enums";
 import { CHARACTER_MOVEMENT_DELAY_MS, DEFAULT_CHARACTER_X, DEFAULT_CHARACTER_Y } from "@/constants";
@@ -22,6 +22,7 @@ export function GameWorldPage() {
   const location = useLocation();
   const { user } = useUserData();
   const navigatingRef = useRef(false);
+  const [isDebug, setIsDebug] = useState(false);
 
   const handleMovement = useCallback(() => {
     if (server.isConnected) {
@@ -61,6 +62,11 @@ export function GameWorldPage() {
     console.log(`Entered entity: ${entity.name} (${entity.type})`);
   }, [server, navigate, location.pathname]);
 
+  const handleToggleDebug = useCallback(() => {
+    setIsDebug((prev) => !prev);
+    console.log(`Debug mode: ${!isDebug ? 'ON' : 'OFF'}`);
+  }, [setIsDebug, isDebug]);
+
   // Show connecting state
   // TODO: Better loading visualization or component
   if (server.isConnecting) {
@@ -83,8 +89,18 @@ export function GameWorldPage() {
               self={self}
               onEnterEntity={handleEnterEntity}
               hidden={!server.isConnected}
+              debug={isDebug}
           />
+          <input type='checkbox' name="debug" checked={isDebug} onChange={handleToggleDebug} />
           <button onClick={handleDisconnect}>Disconnect</button>
+
+          { isDebug && (
+            <>
+              <p>Character Position: {self?.x}, {Math.ceil(self?.y ?? 0)}</p>
+              <p>Mouse Position: {mouse.elementX}, {Math.ceil(mouse.elementY ?? 0)}</p>
+            </>
+          )}
+          
       </>
   )
 }

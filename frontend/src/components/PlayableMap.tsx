@@ -8,6 +8,7 @@
 import { CHARACTER_HEIGHT, CHARACTER_MOVEMENT_DELAY_MS, CHARACTER_WIDTH, MAP_ENTITIES, MAP_HEIGHT, MAP_WIDTH } from "@/constants";
 import type { MapEntity, PlayerCharacter } from "@/models";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import mapBackground from "@/assets/map/map_ai_placeholder.png";
 
 interface PlayableMapProps extends React.HTMLAttributes<HTMLDivElement> {
     onMovement?: () => void;
@@ -19,9 +20,10 @@ interface PlayableMapProps extends React.HTMLAttributes<HTMLDivElement> {
     onEnterEntity?: (entity: MapEntity) => void;
     /** Called once when self exits an entity's bounds */
     onExitEntity?: (entity: MapEntity) => void;
+    debug?: boolean;
 }
 
-export function PlayableMap({ onMovement, players, mouseRef, hidden, self, onEnterEntity, onExitEntity }: PlayableMapProps) {
+export function PlayableMap({ onMovement, players, mouseRef, hidden, self, onEnterEntity, onExitEntity, debug = false }: PlayableMapProps) {
     const [entities] = useState<MapEntity[]>(MAP_ENTITIES);
 
     // Track which entities we're currently inside to avoid re-firing events (ref avoids rerenders)
@@ -38,10 +40,11 @@ export function PlayableMap({ onMovement, players, mouseRef, hidden, self, onEnt
                 // Initialize position if player is new
                 if (!updated.has(player.user.name)) {
                     updated.set(player.user.name, { x: player.x, y: player.y });
-                } else {
-                    // Update to new position (CSS transition will animate)
-                    updated.set(player.user.name, { x: player.x, y: player.y });
+                    break;
                 }
+
+                // Update to new position (CSS transition will animate)
+                updated.set(player.user.name, { x: player.x, y: player.y });
             }
             // Remove players that are no longer in the game
             for (const name of updated.keys()) {
@@ -122,8 +125,17 @@ export function PlayableMap({ onMovement, players, mouseRef, hidden, self, onEnt
         <div
             hidden={hidden}
             ref={mouseRef}
-            style={{ position: 'relative', border: '1px solid black', backgroundColor: 'green', width: `${MAP_WIDTH}px`, height: `${MAP_HEIGHT}px`, marginTop: '20px' }} // TODO: move styling to CSS
+            style={{ 
+                position: 'relative',
+                border: '1px solid black',
+                backgroundColor: 'green',
+                backgroundImage: `url(${mapBackground})`,
+                backgroundSize: 'contain',
+                width: `${MAP_WIDTH}px`,
+                height: `${MAP_HEIGHT}px`,
+                marginTop: '20px' }} // TODO: move styling to CSS
             onClick={onMovement}
+            
         >
             {entities.map((entity) => (
                 <div
@@ -134,16 +146,17 @@ export function PlayableMap({ onMovement, players, mouseRef, hidden, self, onEnt
                         top: `${entity.pos.y}px`,
                         width: `${entity.size.width}px`,
                         height: `${entity.size.height}px`,
-                        backgroundColor: 'red', // Placeholder color if sprite fails to load
+                        backgroundColor: `${ debug ? 'red' : 'transparent' }`, // Placeholder color if sprite fails to load
                     }}>
-                    <img
+                    { debug && <p>{entity.name}</p> }
+                    {/* <img
                         src={entity.spritePath}
-                        alt={entity.name}
                         style={{
                             width: `${entity.size.width}px`,
                             height: `${entity.size.height}px`,
                         }}
-                    />
+                    /> */ /* For now, comment this out since the map graphics are static. */}
+                    
                 </div>
             ))}
 

@@ -5,6 +5,7 @@
  * @date 2025-10-24
  */
 
+import "@styles/global.css";
 import './App.css'
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { RoutePath } from './enums';
