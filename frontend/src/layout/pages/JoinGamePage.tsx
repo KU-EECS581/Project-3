@@ -41,7 +41,7 @@ export function JoinGamePage() {
     useEffect(() => {
         // If already connected, go to game world
         if (server.isConnected) {
-            navigate(RoutePath.GAME_WORLD);
+            navigate(RoutePath.MAP);
             return;
         }
 

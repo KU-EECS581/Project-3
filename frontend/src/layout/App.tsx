@@ -8,7 +8,7 @@
 import './App.css'
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { RoutePath } from './enums';
-import { TitlePage, CreateCharacterPage, JoinGamePage, GameWorldPage } from './pages';
+import { TitlePage, CreateCharacterPage, JoinGamePage, GameWorldPage, BankPage, BlackjackGamePage, PokerGamePage, ShopPage, SlotsGamePage } from './pages';
 import { UserDataProvider, GameServerProvider } from '@/contexts';
 
 function App() {
@@ -27,8 +27,23 @@ function App() {
                     path={RoutePath.JOIN_GAME}
                     element={<JoinGamePage />} />
                 <Route
-                    path={RoutePath.GAME_WORLD}
+                    path={RoutePath.MAP}
                     element={<GameWorldPage />} />
+                <Route
+                    path={RoutePath.MAP_BANK}
+                    element={<BankPage />} />
+                <Route
+                    path={RoutePath.MAP_SHOP}
+                    element={<ShopPage />} />
+                <Route
+                    path={RoutePath.MAP_SLOTS}
+                    element={<SlotsGamePage />} />
+                <Route
+                    path={RoutePath.MAP_BLACKJACK}
+                    element={<BlackjackGamePage />} />
+                <Route
+                    path={RoutePath.MAP_POKER}
+                    element={<PokerGamePage />} />
             </Routes>
         </BrowserRouter>
       </GameServerProvider>
