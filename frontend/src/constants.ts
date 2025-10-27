@@ -25,6 +25,8 @@ export const MAP_HEIGHT = 600;
 export const DEFAULT_CHARACTER_X = MAP_WIDTH/2 - CHARACTER_WIDTH/2;
 export const DEFAULT_CHARACTER_Y = MAP_HEIGHT/2 - CHARACTER_HEIGHT/2;
 
+export const BANK_FUNDS_AMOUNT = 100;
+
 export const DEFAULT_MAP_ENTITY_SIZE: MapEntitySize = {
     width: 64,
     height: 64,

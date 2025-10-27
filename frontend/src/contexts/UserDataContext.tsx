@@ -14,6 +14,8 @@ export interface UserDataContextProps {
     saveUser: (newUser: User) => void;
     loadUser: () => void;
     clearUser: () => void;
+    addFunds: (amount: number) => void;
+    removeFunds: (amount: number) => void;
     exists: boolean;
 }
 

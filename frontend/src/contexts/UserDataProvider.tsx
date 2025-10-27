@@ -40,6 +40,28 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
         setUser(undefined);
         localStorage.removeItem(USER_DATA_KEY);
     }, [setUser]);
+
+    const addFunds = useCallback((amount: number) => {
+        setUser((prev) => {
+            if (prev) {
+                const updatedUser = { ...prev, balance: (prev.balance || 0) + amount };
+                localStorage.setItem(USER_DATA_KEY, JSON.stringify(updatedUser));
+                return updatedUser;
+            }
+            return prev;
+        });
+    }, [setUser]);
+
+    const removeFunds = useCallback((amount: number) => {
+        setUser((prev) => {
+            if (prev) {
+                const updatedUser = { ...prev, balance: (prev.balance || 0) - amount };
+                localStorage.setItem(USER_DATA_KEY, JSON.stringify(updatedUser));
+                return updatedUser;
+            }
+            return prev;
+        });
+    }, [setUser]);
     
     /**
      * Indicates whether user data exists
@@ -54,7 +76,9 @@ export function UserDataProvider({ children }: { children: React.ReactNode }) {
             saveUser,
             loadUser,
             clearUser,
-            exists
+            exists,
+            addFunds,
+            removeFunds,
         }}>
             {children}
         </UserDataContext.Provider>
