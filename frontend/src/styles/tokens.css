@@ -1,0 +1,20 @@
+:root {
+  /* Core brand colors */
+  --color-primary: #ffcb52;
+  --color-accent: #b95eff;
+  --color-accent-hover: #a24be2;
+
+  /* Backgrounds */
+  --color-bg: #120f1c;
+  --color-bg-gradient1: #1e1730;
+  --color-bg-gradient2: #0c0814;
+
+  /* Cards and text */
+  --color-card-bg: rgba(30, 25, 50, 0.85);
+  --color-text: #f5f5f5;
+  --color-text-muted: #c7c7c7;
+
+  /* Shadows / borders */
+  --shadow-strong: 0 10px 35px rgba(0, 0, 0, 0.6);
+  --radius-md: 10px;
+}
