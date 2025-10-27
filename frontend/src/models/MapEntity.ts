@@ -5,7 +5,10 @@
  * @date 2025-10-26
  */
 
+import type { MapEntityKeyType } from "@/enums";
+
 export interface MapEntity {
+    key: MapEntityKeyType;
     name: string;
     type: 'shop' | 'game' | 'other';
     spritePath?: string;

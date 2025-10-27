@@ -10,8 +10,13 @@
 const RoutePath = {
     HOME: "/",
     JOIN_GAME: "/join",
-    GAME_WORLD: "/game",
     CREATE_PLAYER: "/create-character",
+    MAP: "/game",
+    MAP_POKER: "/game/poker",
+    MAP_BLACKJACK: "/game/blackjack",
+    MAP_SLOTS: "/game/slots",
+    MAP_SHOP: "/game/shop",
+    MAP_BANK: "/game/bank",
 } as const;
 
 type RoutePathType = typeof RoutePath[keyof typeof RoutePath];

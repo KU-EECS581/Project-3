@@ -7,6 +7,7 @@
 
 import type { User } from "~middleware/models";
 import type { MapEntity, MapEntitySize } from "./models";
+import { MapEntityKey } from "./enums";
 
 export const USER_DATA_KEY = "userData";
 export const DEFAULT_HOST = "localhost";
@@ -28,6 +29,7 @@ export const DEFAULT_MAP_ENTITY_SIZE: MapEntitySize = {
 
 export const MAP_ENTITIES: MapEntity[] = [
     {
+        key: MapEntityKey.SHOP,
         name: "Shop",
         type: "shop",
         spritePath: "/assets/sprites/shop.png",
@@ -35,6 +37,7 @@ export const MAP_ENTITIES: MapEntity[] = [
         size: DEFAULT_MAP_ENTITY_SIZE,
     },
     {
+        key: MapEntityKey.BANK,
         name: "Poker Table",
         type: "game",
         spritePath: "/assets/sprites/poker_table.png",
@@ -42,6 +45,7 @@ export const MAP_ENTITIES: MapEntity[] = [
         size: DEFAULT_MAP_ENTITY_SIZE,
     },
     {
+        key: MapEntityKey.GAME_BLACKJACK,
         name: "Blackjack Table",
         type: "game",
         spritePath: "/assets/sprites/blackjack_table.png",
@@ -49,6 +53,7 @@ export const MAP_ENTITIES: MapEntity[] = [
         size: DEFAULT_MAP_ENTITY_SIZE,
     },
     {
+        key: MapEntityKey.GAME_SLOTS,
         name: "Slot Machine",
         type: "game",
         spritePath: "/assets/sprites/slot_machine.png",

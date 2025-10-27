@@ -9,3 +9,8 @@ export * from "./TitlePage";
 export * from "./CreateCharacterPage";
 export * from "./JoinGamePage";
 export * from "./GameWorldPage";
+export * from "./BlackjackGamePage";
+export * from "./SlotsGamePage";
+export * from "./BankPage";
+export * from "./ShopPage";
+export * from "./PokerGamePage";
