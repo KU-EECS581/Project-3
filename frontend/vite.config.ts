@@ -11,6 +11,7 @@ export default defineConfig({
       "@api": resolve(__dirname, "./src/api"),
       "@components": resolve(__dirname, "./src/components"),
       "@models": resolve(__dirname, "./src/models"),
+      "@styles": resolve(__dirname, "./src/styles"),
       "~middleware": resolve(__dirname, "../middleware")
     }
   }
