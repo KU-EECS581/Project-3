@@ -51,19 +51,25 @@ export function PokerGameLobby({
         <div>
             <div>
                 {/* TODO: clean this up or separate it out more. It's messy, I know. */}
-                <h2>Players</h2>
+                <h2>Players ({server.pokerPlayers.length})</h2>
                 <ConnectedPlayersList players={server.pokerPlayers} />
             </div>
 
             <div>
                 <h2>Settings</h2>
                 <form onSubmit={handleSettingsSubmitted}>
-
+                    {/* TODO: inputs for minBet / maxBet */}
                     <button type="submit">Update Settings</button>
                 </form>
             </div>
 
-            <button onClick={handleStartClicked}>Start Game</button>
+            {server.pokerInGame ? (
+                <p>Game in progress…</p>
+            ) : (
+                <button onClick={handleStartClicked} disabled={server.pokerPlayers.length < 2}>
+                    Start Game
+                </button>
+            )}
 
         </div>
     );

@@ -10,6 +10,7 @@ import { PokerGameLobby } from "./PokerGameLobby";
 import { type PokerGameSettings } from "~middleware/models";
 import { MAP_HEIGHT, MAP_WIDTH } from "@/constants";
 import { useGameServer } from "@/api";
+import { PokerTable } from "./poker/PokerTable";
 
 // TODO: move these constants to config/separate file
 const DEFAULT_MIN_BET = 10;
@@ -70,7 +71,8 @@ export function PokerGame({
                 
             { !isGameStarted && <PokerGameLobby settings={settings} onGameStarted={handleStartGame} onSettingsChanged={handleSettingsChanged} /> }
             { isGameStarted && (
-                <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+                    <PokerTable users={server.pokerPlayers} minBet={settings.minBet} maxBet={settings.maxBet} />
                     <button onClick={handleEndGame}>End Game (debug button)</button>
                 </div>
             )}
