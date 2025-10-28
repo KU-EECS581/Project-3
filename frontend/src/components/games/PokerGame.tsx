@@ -5,10 +5,11 @@
  * @date 2025-10-28
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PokerGameLobby } from "./PokerGameLobby";
 import { type PokerGameSettings } from "~middleware/models";
 import { MAP_HEIGHT, MAP_WIDTH } from "@/constants";
+import { useGameServer } from "@/api";
 
 // TODO: move these constants to config/separate file
 const DEFAULT_MIN_BET = 10;
@@ -29,8 +30,19 @@ export function PokerGame({
     onGameStarted,
     onGameEnded
 }: PokerGameProps) {
+    const server = useGameServer();
     const [isGameStarted, setIsGameStarted] = useState(false);
     const [settings, setSettings] = useState<PokerGameSettings>(DEFAULT_SETTINGS);
+
+    // Reflect backend lobby state into local UI
+    useEffect(() => {
+        if (server.pokerInGame !== isGameStarted) {
+            setIsGameStarted(server.pokerInGame);
+            if (server.pokerInGame) onGameStarted?.();
+            else onGameEnded?.();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [server.pokerInGame]);
 
     const handleStartGame = useCallback(() => {
         setIsGameStarted(true);

@@ -7,7 +7,19 @@
 
 import WebSocket, { WebSocketServer } from 'ws';
 import { DEFAULT_HOST, DEFAULT_PORT } from './constants';
-import { AnyGameMessageSchema, GameMessageKey, MESSAGE_VERSION, MovementMessageSchema, type MovementMessage } from '../../middleware';
+import {
+    AnyGameMessageSchema,
+    GameMessageKey,
+    MESSAGE_VERSION,
+    MovementMessageSchema,
+    type MovementMessage,
+    type User,
+    JoinPokerGameMessageSchema,
+    type JoinPokerMessage,
+    LeavePokerGameMessageSchema,
+    StartPokerGameMessageSchema,
+    type PokerLobbyState,
+} from '../../middleware';
 
 export class GameServer {
     private host: string = DEFAULT_HOST;
@@ -15,8 +27,20 @@ export class GameServer {
     private wss: WebSocketServer;
     private clients: Set<WebSocket> = new Set();
     private lobbies: Map<string, WebSocket[]> = new Map();
+
     // Track last known position per user to sync state to newly connected clients
     private lastKnownPositions: Map<string, MovementMessage> = new Map();
+
+    // Map a connected socket to its associated user (set on first message containing a user)
+    private userBySocket: Map<WebSocket, User> = new Map();
+
+    // Simple poker lobby state (single lobby for now)
+    private pokerLobbyId = 'poker';
+    private pokerLobbyState: PokerLobbyState = {
+        players: [],
+        settings: { minBet: 10, maxBet: 1000 },
+        inGame: false,
+    };
 
     constructor(host?: string, port?: number) {
         if (host) this.host = host;
@@ -52,6 +76,31 @@ export class GameServer {
             this.clients.delete(ws);
             this.lobbies.forEach((clients, lobbyId) => {
                 this.lobbies.set(lobbyId, clients.filter(client => client !== ws));
+            });
+
+            // Remove from poker lobby if present
+            const user = this.userBySocket.get(ws);
+            if (user) {
+                const before = this.pokerLobbyState.players.length;
+                this.pokerLobbyState.players = this.pokerLobbyState.players.filter(p => p.name !== user.name);
+                this.userBySocket.delete(ws);
+                if (before !== this.pokerLobbyState.players.length) {
+                    this.broadcastPokerLobbyState();
+                }
+            }
+
+            // Send message to all clients that this user has disconnected
+            // (Could be expanded to track users more formally)
+            const disconnectMessage = JSON.stringify({
+                key: GameMessageKey.DISCONNECT,
+                v: MESSAGE_VERSION,
+                payload: {},
+                ts: Date.now(),
+            });
+            this.clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(disconnectMessage);
+                }
             });
         });
 
@@ -95,19 +144,59 @@ export class GameServer {
                 return;
             }
             movement = legacy.data;
+            // Bind user if provided
+            this.tryBindUser(ws, movement.user);
         }
 
         // Process envelope message
         const envelope = maybeEnvelope.data;
         switch (envelope?.key) {
             case GameMessageKey.MOVE:
+                {
                     const payloadResult = MovementMessageSchema.safeParse(envelope.payload);
-                if (!payloadResult.success) {
-                    console.error('Invalid MOVE payload:', payloadResult.error);
+                    if (!payloadResult.success) {
+                        console.error('Invalid MOVE payload:', payloadResult.error);
+                        return;
+                    }
+                    movement = payloadResult.data;
+                    // Bind user
+                    this.tryBindUser(ws, movement.user);
+                    break;
+                }
+            case GameMessageKey.JOIN_POKER:
+                {
+                    const joinResult = JoinPokerGameMessageSchema.safeParse(envelope);
+                    if (!joinResult.success) {
+                        console.error('Invalid JOIN_POKER message:', joinResult.error);
+                        return;
+                    }
+                    const payload: JoinPokerMessage = joinResult.data.payload;
+                    this.tryBindUser(ws, payload.user);
+                    this.handleJoinPoker(ws, payload);
                     return;
                 }
-                movement = payloadResult.data;
-                break;
+            case GameMessageKey.LEAVE_POKER:
+                {
+                    const leaveResult = LeavePokerGameMessageSchema.safeParse(envelope);
+                    if (!leaveResult.success) {
+                        console.error('Invalid LEAVE_POKER message:', leaveResult.error);
+                        return;
+                    }
+                    const payload: JoinPokerMessage = leaveResult.data.payload;
+                    this.tryBindUser(ws, payload.user);
+                    this.handleLeavePoker(ws, payload);
+                    return;
+                }
+            case GameMessageKey.START_POKER:
+                {
+                    const startResult = StartPokerGameMessageSchema.safeParse(envelope);
+                    if (!startResult.success) {
+                        console.error('Invalid START_POKER message:', startResult.error);
+                        return;
+                    }
+                    this.handleStartPoker(ws);
+                    return;
+                }
             default:
                 // Ignore other message types for now
                 return;
@@ -127,6 +216,68 @@ export class GameServer {
         this.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(payload);
+            }
+        });
+    }
+
+    private tryBindUser(ws: WebSocket, user: User | undefined) {
+        if (!user) return;
+        const existing = this.userBySocket.get(ws);
+        if (!existing || existing.name !== user.name) {
+            this.userBySocket.set(ws, user);
+        }
+    }
+
+    private handleJoinPoker(ws: WebSocket, payload: JoinPokerMessage) {
+        // Add player if not already present
+        const exists = this.pokerLobbyState.players.some(p => p.name === payload.user.name);
+        if (!exists) {
+            this.pokerLobbyState.players.push(payload.user);
+        }
+        // Track socket in lobby list
+        const current = this.lobbies.get(this.pokerLobbyId) ?? [];
+        if (!current.includes(ws)) {
+            this.lobbies.set(this.pokerLobbyId, [...current, ws]);
+        }
+        this.broadcastPokerLobbyState();
+    }
+
+    private handleLeavePoker(ws: WebSocket, payload: JoinPokerMessage) {
+        // Remove by user name
+        const before = this.pokerLobbyState.players.length;
+        this.pokerLobbyState.players = this.pokerLobbyState.players.filter(p => p.name !== payload.user.name);
+        // Remove socket from lobby
+        const current = this.lobbies.get(this.pokerLobbyId) ?? [];
+        this.lobbies.set(this.pokerLobbyId, current.filter(s => s !== ws));
+        if (before !== this.pokerLobbyState.players.length) {
+            this.broadcastPokerLobbyState();
+        }
+    }
+
+    private handleStartPoker(ws: WebSocket) {
+        // Only allow start if at least 2 players and not already running
+        if (this.pokerLobbyState.inGame) return;
+        if (this.pokerLobbyState.players.length < 2) {
+            console.warn('Not enough players to start poker');
+            return;
+        }
+        this.pokerLobbyState.inGame = true;
+        this.broadcastPokerLobbyState();
+        // NOTE: Full poker game flow is out of scope here; this establishes lobby/start scaffolding.
+    }
+
+    private broadcastPokerLobbyState() {
+        const envelope = {
+            key: GameMessageKey.POKER_LOBBY_STATE,
+            v: MESSAGE_VERSION,
+            payload: this.pokerLobbyState,
+            ts: Date.now(),
+        } as const;
+        const message = JSON.stringify(envelope);
+        const sockets = this.lobbies.get(this.pokerLobbyId) ?? [];
+        sockets.forEach(s => {
+            if (s.readyState === WebSocket.OPEN) {
+                s.send(message);
             }
         });
     }

@@ -7,7 +7,7 @@
 
 import { useGameServer } from "@/api";
 import { ConnectedPlayersList } from "../ConnectedPlayersList";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import type { PokerGameSettings } from "~middleware/models/PokerGameSettings";
 
 interface PokerGameLobbyProps {
@@ -23,9 +23,18 @@ export function PokerGameLobby({
 }: PokerGameLobbyProps) {
     const server = useGameServer();
 
+    // Join poker lobby on mount, leave on unmount
+    useEffect(() => {
+        server.joinPoker();
+        return () => server.leavePoker();
+        // We intentionally depend only on stable server methods
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const handleStartClicked = useCallback(() => {
+        server.startPoker();
         onGameStarted?.();
-    }, [onGameStarted]);
+    }, [server, onGameStarted]);
 
     const handleSettingsSubmitted = useCallback((event: React.FormEvent) => {
         event.preventDefault();

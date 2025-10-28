@@ -26,6 +26,10 @@ export interface GameServerContextProps {
     port: number;
     error: string | undefined;
     pokerPlayers: User[];
+    pokerInGame: boolean;
+    joinPoker: () => void;
+    leavePoker: () => void;
+    startPoker: () => void;
 }
 
 export const GameServerContext = createContext<GameServerContextProps | undefined>(undefined);

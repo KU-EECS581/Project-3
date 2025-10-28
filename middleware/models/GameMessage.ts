@@ -9,6 +9,8 @@ import * as z from 'zod';
 import { GameMessageKeys, type GameMessageKeyType } from "../enums";
 import { MovementMessageSchema, type MovementMessage } from './MovementMessage';
 import { JoinPokerMessageSchema, type JoinPokerMessage } from './JoinPokerMessage';
+import { PokerLobbyStateSchema, type PokerLobbyState } from './PokerLobbyState';
+import { StartPokerMessageSchema, type StartPokerMessage } from './StartPokerMessage';
 
 export const MESSAGE_VERSION = 1 as const;
 
@@ -52,3 +54,12 @@ export const MoveGameMessageSchema = createGameMessageSchema('MOVE', MovementMes
 
 export type JoinPokerGameMessage = GameMessage<JoinPokerMessage, 'JOIN_POKER'>;
 export const JoinPokerGameMessageSchema = createGameMessageSchema('JOIN_POKER', JoinPokerMessageSchema);
+
+export type LeavePokerGameMessage = GameMessage<JoinPokerMessage, 'LEAVE_POKER'>;
+export const LeavePokerGameMessageSchema = createGameMessageSchema('LEAVE_POKER', JoinPokerMessageSchema);
+
+export type StartPokerGameMessage = GameMessage<StartPokerMessage, 'START_POKER'>;
+export const StartPokerGameMessageSchema = createGameMessageSchema('START_POKER', StartPokerMessageSchema);
+
+export type PokerLobbyStateGameMessage = GameMessage<PokerLobbyState, 'POKER_LOBBY_STATE'>;
+export const PokerLobbyStateGameMessageSchema = createGameMessageSchema('POKER_LOBBY_STATE', PokerLobbyStateSchema);

@@ -10,7 +10,7 @@ import { GameServerContext } from "./GameServerContext";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_CHARACTER_X, DEFAULT_CHARACTER_Y, DEFAULT_HOST, DEFAULT_PORT, DEFAULT_USER } from "@/constants";
 import type { PlayerCharacter } from "@/models";
-import { AnyGameMessageSchema, MESSAGE_VERSION, type MovementMessage, MovementMessageSchema, type User } from "~middleware/models";
+import { AnyGameMessageSchema, MESSAGE_VERSION, type MovementMessage, MovementMessageSchema, type User, PokerLobbyStateSchema } from "~middleware/models";
 import { GameMessageKey } from "~middleware/enums";
 
 export function GameServerProvider({children}: {children: React.ReactNode}) {
@@ -23,6 +23,8 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
     const [players, setPlayers] = useState<PlayerCharacter[]>([]);
     const [receivedMessages, /*setReceivedMessages*/] = useState<string[]>([]);
     const userRef = useRef(request.user);
+    const [pokerPlayers, setPokerPlayers] = useState<User[]>([]);
+    const [pokerInGame, setPokerInGame] = useState(false);
     
     // Keep a ref to the latest user without retriggering socket effect
     useEffect(() => {
@@ -215,6 +217,14 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
                         }
                         break;
                     }
+                    case GameMessageKey.POKER_LOBBY_STATE: {
+                        const state = PokerLobbyStateSchema.safeParse(msg.payload);
+                        if (state.success) {
+                            setPokerPlayers(state.data.players);
+                            setPokerInGame(state.data.inGame);
+                        }
+                        break;
+                    }
                     default:
                         // Ignore other message types for now
                         console.warn('Received unhandled message key:', msg.key);
@@ -269,10 +279,39 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         };
     }, [ws]);
 
-    // TODO: Actually implement this
-    const pokerPlayers: User[] = useMemo(() => {
-        return [];
-    }, []);
+    // Poker lobby helpers
+    const joinPoker = useCallback(() => {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !userRef.current) return;
+        const envelope = {
+            key: GameMessageKey.JOIN_POKER,
+            v: MESSAGE_VERSION,
+            payload: { user: userRef.current },
+            ts: Date.now(),
+        } as const;
+        ws.send(JSON.stringify(envelope));
+    }, [ws]);
+
+    const leavePoker = useCallback(() => {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !userRef.current) return;
+        const envelope = {
+            key: GameMessageKey.LEAVE_POKER,
+            v: MESSAGE_VERSION,
+            payload: { user: userRef.current },
+            ts: Date.now(),
+        } as const;
+        ws.send(JSON.stringify(envelope));
+    }, [ws]);
+
+    const startPoker = useCallback(() => {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !userRef.current) return;
+        const envelope = {
+            key: GameMessageKey.START_POKER,
+            v: MESSAGE_VERSION,
+            payload: { user: userRef.current },
+            ts: Date.now(),
+        } as const;
+        ws.send(JSON.stringify(envelope));
+    }, [ws]);
 
     // Implementation of the GameServerProvider
     return (
@@ -292,6 +331,10 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             port: request.port,
             error,
             pokerPlayers,
+            pokerInGame,
+            joinPoker,
+            leavePoker,
+            startPoker,
         }}>
             {children}
         </GameServerContext.Provider>
