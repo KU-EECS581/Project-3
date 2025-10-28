@@ -21,7 +21,6 @@ const DEFAULT_SETTINGS: PokerGameSettings = {
     maxBet: DEFAULT_MAX_BET,
 }
 
-
 interface PokerGameProps {
     onGameStarted?: () => void;
     onGameEnded?: () => void;

@@ -1,9 +1,15 @@
+/**
+ * @file PokerTable.tsx
+ * @description Component representing the poker table and managing game state.
+ * @author Riley Meyerkorth
+ * @date 2025-10-28
+ */
+
 import { useEffect, useMemo, useState } from 'react';
 import { useUserData } from '@/hooks/useUserData';
 import { CardBack, CardView } from './CardView';
 import { BettingControls } from './BettingControls';
-import type { PlayerState, TableState } from './types';
-import { createDeck, draw, shuffle } from './deck';
+import { Deck, type PlayerState, type TableState } from '~middleware/cards';
 import type { User } from '~middleware/models';
 
 interface PokerTableProps {
@@ -14,13 +20,12 @@ interface PokerTableProps {
 
 export function PokerTable({ users, minBet, maxBet }: PokerTableProps) {
     const { user: me } = useUserData();
-    const [deck, setDeck] = useState(() => shuffle(createDeck()));
+    const [deck, setDeck] = useState(new Deck());
     const [state, setState] = useState<TableState>(() => initialState(users, minBet, maxBet));
 
     // Re-initialize when users change (e.g., someone joins while in lobby)
     useEffect(() => {
-        const fresh = shuffle(createDeck());
-        setDeck(fresh);
+        deck.shuffle();
     setState(initialState(users, minBet, maxBet));
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [users.map(u => u.name).join('|')]);
@@ -29,17 +34,16 @@ export function PokerTable({ users, minBet, maxBet }: PokerTableProps) {
     const toCall = Math.max(0, state.currentBet - current.currentBet);
     const canCheck = toCall === 0;
 
-    function dealHoleCards(next: TableState, d: typeof deck): [TableState, typeof deck] {
-        let deckNow = d;
+    function dealHoleCards(next: TableState, d: Deck): [TableState, Deck] {
         const updatedPlayers: PlayerState[] = next.players.map(p => ({ ...p, hole: [] }));
         for (let r = 0; r < 2; r++) {
             for (let i = 0; i < updatedPlayers.length; i++) {
-                const [c, rest] = draw(deckNow, 1);
-                deckNow = rest;
-                updatedPlayers[i].hole.push(c[0]);
+                const c  = d.dealCard();
+                if (!c) continue; // deck exhausted?
+                updatedPlayers[i].hole.push(c);
             }
         }
-        return [{ ...next, players: updatedPlayers }, deckNow];
+        return [{ ...next, players: updatedPlayers }, d];
     }
 
     useEffect(() => {
@@ -55,24 +59,36 @@ export function PokerTable({ users, minBet, maxBet }: PokerTableProps) {
     function advanceStreet() {
         setState(prev => {
             const next = { ...prev, community: [...prev.community] };
-            if (prev.street === 'preflop') {
-                const [cards, rest] = draw(deck, 3);
-                setDeck(rest);
-                next.community.push(...cards);
-                next.street = 'flop';
-            } else if (prev.street === 'flop') {
-                const [cards, rest] = draw(deck, 1);
-                setDeck(rest);
-                next.community.push(...cards);
-                next.street = 'turn';
-            } else if (prev.street === 'turn') {
-                const [cards, rest] = draw(deck, 1);
-                setDeck(rest);
-                next.community.push(...cards);
-                next.street = 'river';
-            } else if (prev.street === 'river') {
-                next.street = 'showdown';
+            switch (prev.street) {
+                case 'preflop': {
+                    const cards = deck.dealCards(3);
+                    next.community.push(...cards);
+                    next.street = 'flop';
+                    break;
+                }
+                case 'flop': {
+                    const card = deck.dealCard();
+                    if (!card) throw new Error('Failed to draw card');
+                    next.community.push(card);
+                    next.street = 'turn';
+                    break;
+                }
+                case 'turn': {
+                    const card = deck.dealCard();
+                    if (!card) throw new Error('Failed to draw card');
+                    next.community.push(card);
+                    next.street = 'river';
+                    break;
+                }
+                case 'river': {
+                    const card = deck.dealCard();
+                    if (!card) throw new Error('Failed to draw card');
+                    next.community.push(card);
+                    next.street = 'showdown';
+                    break;
+                }
             }
+
             // Reset per-street bets
             next.currentBet = 0;
             next.players = next.players.map(p => ({ ...p, currentBet: 0 }));

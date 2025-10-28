@@ -1,5 +1,4 @@
-import type { Card } from './types';
-import { isRedSuit } from './types';
+import { type Card, isRedSuit, rankToDisplay, suitToSymbol } from '~middleware/cards';
 
 export function CardBack({ size = 60 }: { size?: number }) {
     return (
@@ -30,9 +29,9 @@ export function CardView({ card, size = 60 }: { card: Card; size?: number }) {
             color,
             boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
         }}>
-            <div style={{fontWeight: 700}}>{card.rank}</div>
-            <div style={{fontSize: Math.round(size*0.5), textAlign: 'center'}}>{card.suit}</div>
-            <div style={{alignSelf: 'flex-end', transform: 'rotate(180deg)', fontWeight: 700}}>{card.rank}</div>
+            <div style={{fontWeight: 700}}>{rankToDisplay(card.rank)}</div>
+            <div style={{fontSize: Math.round(size*0.5), textAlign: 'center'}}>{suitToSymbol(card.suit)}</div>
+            {/* <div style={{alignSelf: 'flex-end', transform: 'rotate(180deg)', fontWeight: 700}}>{rankToDisplay(card.rank)}</div> */}
         </div>
     );
 }

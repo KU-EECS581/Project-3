@@ -1,5 +1,12 @@
+/**
+ * @file PlayerSeat.tsx
+ * @description Component representing a player's seat in a poker game.
+ * @author Riley Meyerkorth
+ * @date 2025-10-28
+ */
+
 import { CardBack, CardView } from './CardView';
-import type { PlayerState } from './types';
+import type { PlayerState } from '~middleware/cards';
 
 export function PlayerSeat({
     player,
