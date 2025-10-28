@@ -8,31 +8,22 @@
 import { useGameServer } from "@/api";
 import { PlayableMap } from "@/components";
 import type { PlayerCharacter } from "@/models";
-import { useCharacter, useGameWorld } from "@/hooks";
+import { useCharacter, useConnectionCheck, useGameWorld } from "@/hooks";
 import { useMouse } from "@uidotdev/usehooks";
-import { useEffect } from "react";
-import { useNavigate } from "react-router";
-import { RoutePath } from "../enums";
 import { MapDebugPanel } from "@/components/MapDebugPanel";
 
 export function GameWorldPage() {
   const [mouse, ref] = useMouse();
   const server = useGameServer();
-  const navigate = useNavigate();
   const { self } = useCharacter();
 
   const { handleMovement, handleDisconnect, handleEnterEntity, debug, handleToggleDebug } = useGameWorld({
     mouse
   });
 
-  useEffect(() => {
-    // If disconnected, go to home
-    if (server.isClosed) {
-      navigate(RoutePath.HOME);
-      return;
-    }
-  }, [server, navigate]);
-
+  // Check connection status and redirect if disconnected
+  useConnectionCheck();
+  
   // Show connecting state
   // TODO: Better loading visualization or component
   if (server.isConnecting) {

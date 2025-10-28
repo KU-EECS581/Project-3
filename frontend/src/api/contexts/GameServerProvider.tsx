@@ -10,7 +10,7 @@ import { GameServerContext } from "./GameServerContext";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_CHARACTER_X, DEFAULT_CHARACTER_Y, DEFAULT_HOST, DEFAULT_PORT, DEFAULT_USER } from "@/constants";
 import type { PlayerCharacter } from "@/models";
-import { AnyGameMessageSchema, MESSAGE_VERSION, type MovementMessage, MovementMessageSchema } from "~middleware/models";
+import { AnyGameMessageSchema, MESSAGE_VERSION, type MovementMessage, MovementMessageSchema, type User } from "~middleware/models";
 import { GameMessageKey } from "~middleware/enums";
 
 export function GameServerProvider({children}: {children: React.ReactNode}) {
@@ -184,7 +184,7 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             }
         };
 
-    const handleMessage = (event: MessageEvent) => {
+        const handleMessage = (event: MessageEvent) => {
             // setReceivedMessages((prev) => [...prev, /* event.data */]);
             try {
                 const parsed = JSON.parse(event.data);
@@ -269,6 +269,11 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         };
     }, [ws]);
 
+    // TODO: Actually implement this
+    const pokerPlayers: User[] = useMemo(() => {
+        return [];
+    }, []);
+
     // Implementation of the GameServerProvider
     return (
         <GameServerContext.Provider value={{
@@ -285,7 +290,8 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             disconnect,
             host: request.host,
             port: request.port,
-            error
+            error,
+            pokerPlayers,
         }}>
             {children}
         </GameServerContext.Provider>

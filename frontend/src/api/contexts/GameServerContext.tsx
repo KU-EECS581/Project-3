@@ -8,7 +8,7 @@
 import type { ServerConnectionRequest } from "@/api";
 import type { PlayerCharacter } from "@/models";
 import { createContext } from "react";
-import type { MovementMessage } from "~middleware/models";
+import type { MovementMessage, User } from "~middleware/models";
 
 export interface GameServerContextProps {
     isConnecting: boolean;
@@ -25,6 +25,7 @@ export interface GameServerContextProps {
     host: string;
     port: number;
     error: string | undefined;
+    pokerPlayers: User[];
 }
 
 export const GameServerContext = createContext<GameServerContextProps | undefined>(undefined);

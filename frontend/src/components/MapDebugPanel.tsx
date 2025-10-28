@@ -2,7 +2,7 @@
  * @file MapDebugPanel.tsx
  * @description Debug panel for the game map.
  * @author Riley Meyerkorth
- * @date 2025-10-25
+ * @date 2025-10-28
  */
 
 import type { PlayerCharacter } from "@/models";
