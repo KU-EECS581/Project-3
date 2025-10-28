@@ -8,7 +8,7 @@
 import { useGameServer } from "@/api";
 import { PlayableMap } from "@/components";
 import type { MapEntity, PlayerCharacter } from "@/models";
-import { useUserData } from "@/hooks";
+import { useCharacter } from "@/hooks";
 import { useMouse } from "@uidotdev/usehooks";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
@@ -20,9 +20,9 @@ export function GameWorldPage() {
   const server = useGameServer();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useUserData();
   const navigatingRef = useRef(false);
   const [isDebug, setIsDebug] = useState(false);
+  const { self } = useCharacter();
 
   const handleMovement = useCallback(() => {
     if (server.isConnected) {
@@ -41,8 +41,6 @@ export function GameWorldPage() {
       return;
     }
   }, [server, navigate]);
-
-  const self = (user ? server.players.find(p => p.user.name === user.name) : undefined) as PlayerCharacter | undefined;
 
   const handleEnterEntity = useCallback((entity: MapEntity) => {
     // Prevent spamming navigation or re-entrancy

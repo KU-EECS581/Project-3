@@ -1,0 +1,22 @@
+.map-container {
+    position: relative;
+    border: 1px solid black;
+    background-color: green;
+    background-image: url('@/assets/map/map_bg.jpg');
+    background-size: contain;
+    width: 100%;
+    height: 100%;
+    margin-top: 20px;
+    /* Width and height dealt with in component. */
+}
+
+.entity {
+    position: absolute;
+}
+
+
+.player {
+    position: absolute;
+    background-color: blue;
+    color: white;
+}

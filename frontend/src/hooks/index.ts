@@ -6,3 +6,6 @@
  */
 
 export * from './useUserData';
+export * from './useCharacter';
+export * from './useCharacterAnimations';
+export * from './useCharacterCollisions';
