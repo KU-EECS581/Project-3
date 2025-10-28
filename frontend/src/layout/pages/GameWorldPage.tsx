@@ -31,7 +31,11 @@ export function GameWorldPage() {
   }, [server, mouse]);
 
   const handleDisconnect = useCallback(() => {
-    server.disconnect();
+    // Ask for confirmation before disconnecting
+    const confirmExit = window.confirm("Are you sure you want to exit the game world?");
+    if (confirmExit) {
+      server.disconnect();
+    }
   }, [server]);
 
   useEffect(() => {
@@ -52,13 +56,19 @@ export function GameWorldPage() {
       // Move player to spawn point of map to avoid infinite collisions
       server.sendMovement({ x: DEFAULT_CHARACTER_X, y: DEFAULT_CHARACTER_Y });
 
+      // If an exit, handle specially
+      if (entity.type === "exit") {
+        handleDisconnect();
+        return;
+      }
+
       navigatingRef.current = true;
       navigate(entity.route ?? RoutePath.MAP);
     }, CHARACTER_MOVEMENT_DELAY_MS);
 
     // Placeholder for other entity types
     console.log(`Entered entity: ${entity.name} (${entity.type})`);
-  }, [server, navigate, location.pathname]);
+  }, [handleDisconnect, server, navigate, location.pathname]);
 
   const handleToggleDebug = useCallback(() => {
     setIsDebug((prev) => !prev);
@@ -89,11 +99,13 @@ export function GameWorldPage() {
               hidden={!server.isConnected}
               debug={isDebug}
           />
+          <label htmlFor="debug">Debug: </label>
           <input type='checkbox' name="debug" checked={isDebug} onChange={handleToggleDebug} />
-          <button onClick={handleDisconnect}>Disconnect</button>
+          
 
           { isDebug && (
             <>
+              <button onClick={handleDisconnect}>Force Disconnect</button>
               <p>Character Position: {self?.x}, {Math.ceil(self?.y ?? 0)}</p>
               <p>Mouse Position: {mouse.elementX}, {Math.ceil(mouse.elementY ?? 0)}</p>
             </>
