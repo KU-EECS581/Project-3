@@ -51,6 +51,7 @@ export class GameServer {
     // Poker game state
     private pokerGameState: TableState | null = null;
     private pokerDeck: Deck | null = null;
+    private actionsThisRound: Set<string> = new Set();
 
     constructor(host?: string, port?: number) {
         if (host) this.host = host;
@@ -331,6 +332,9 @@ export class GameServer {
         this.pokerDeck = new Deck();
         this.pokerDeck.shuffle();
 
+        // Clear action tracking
+        this.actionsThisRound.clear();
+
         // Deal hole cards
         this.dealHoleCards();
         
@@ -365,6 +369,9 @@ export class GameServer {
             console.warn(`Not ${action.user.name}'s turn`);
             return;
         }
+
+        // Track that this player has acted this round
+        this.actionsThisRound.add(action.user.name);
 
         // Process the action
         switch (action.actionType) {
@@ -434,7 +441,15 @@ export class GameServer {
         player.currentBet += amt;
         player.isAllIn = player.chips === 0;
         this.pokerGameState.pot += amt;
+        
+        const oldBet = this.pokerGameState.currentBet;
         this.pokerGameState.currentBet = Math.max(this.pokerGameState.currentBet, player.currentBet);
+        
+        // If this is a raise, clear action history so everyone must act again
+        if (this.pokerGameState.currentBet > oldBet) {
+            this.actionsThisRound.clear();
+            this.actionsThisRound.add(player.user.name);
+        }
         
         this.pokerGameState.currentPlayerIndex = this.nextPlayerIndex(currentIdx);
     }
@@ -455,6 +470,10 @@ export class GameServer {
         
         const activePlayers = this.pokerGameState.players.filter(p => !p.hasFolded && !p.isAllIn);
         if (activePlayers.length === 0) return true;
+        
+        // All active players must have acted this round
+        const allActed = activePlayers.every(p => this.actionsThisRound.has(p.user.name));
+        if (!allActed) return false;
         
         // All active players have matched the current bet
         return activePlayers.every(p => p.currentBet === this.pokerGameState!.currentBet);
@@ -487,10 +506,11 @@ export class GameServer {
                 break;
         }
 
-        // Reset per-street bets
+        // Reset per-street bets and action tracking
         this.pokerGameState.currentBet = 0;
         this.pokerGameState.players.forEach(p => p.currentBet = 0);
         this.pokerGameState.currentPlayerIndex = (this.pokerGameState.dealerIndex + 1) % this.pokerGameState.players.length;
+        this.actionsThisRound.clear();
     }
 
     private broadcastPokerState() {
