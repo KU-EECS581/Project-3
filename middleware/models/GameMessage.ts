@@ -11,6 +11,8 @@ import { MovementMessageSchema, type MovementMessage } from './MovementMessage';
 import { JoinPokerMessageSchema, type JoinPokerMessage } from './JoinPokerMessage';
 import { PokerLobbyStateSchema, type PokerLobbyState } from './PokerLobbyState';
 import { StartPokerMessageSchema, type StartPokerMessage } from './StartPokerMessage';
+import { PokerActionSchema, type PokerAction } from './PokerAction';
+import { PokerStateSchema, type PokerState } from './PokerState';
 
 export const MESSAGE_VERSION = 1 as const;
 
@@ -63,3 +65,9 @@ export const StartPokerGameMessageSchema = createGameMessageSchema('START_POKER'
 
 export type PokerLobbyStateGameMessage = GameMessage<PokerLobbyState, 'POKER_LOBBY_STATE'>;
 export const PokerLobbyStateGameMessageSchema = createGameMessageSchema('POKER_LOBBY_STATE', PokerLobbyStateSchema);
+
+export type PokerActionGameMessage = GameMessage<PokerAction, 'POKER_ACTION'>;
+export const PokerActionGameMessageSchema = createGameMessageSchema('POKER_ACTION', PokerActionSchema);
+
+export type PokerStateGameMessage = GameMessage<PokerState, 'POKER_STATE'>;
+export const PokerStateGameMessageSchema = createGameMessageSchema('POKER_STATE', PokerStateSchema);

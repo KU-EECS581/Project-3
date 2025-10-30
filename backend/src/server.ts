@@ -19,6 +19,12 @@ import {
     LeavePokerGameMessageSchema,
     StartPokerGameMessageSchema,
     type PokerLobbyState,
+    PokerActionSchema,
+    type PokerAction,
+    type PokerState,
+    type TableState,
+    Deck,
+    type PlayerState,
 } from '../../middleware';
 
 export class GameServer {
@@ -41,6 +47,10 @@ export class GameServer {
         settings: { minBet: 10, maxBet: 1000 },
         inGame: false,
     };
+    
+    // Poker game state
+    private pokerGameState: TableState | null = null;
+    private pokerDeck: Deck | null = null;
 
     constructor(host?: string, port?: number) {
         if (host) this.host = host;
@@ -197,6 +207,16 @@ export class GameServer {
                     this.handleStartPoker(ws);
                     return;
                 }
+            case GameMessageKey.POKER_ACTION:
+                {
+                    const actionResult = PokerActionSchema.safeParse(envelope.payload);
+                    if (!actionResult.success) {
+                        console.error('Invalid POKER_ACTION message:', actionResult.error);
+                        return;
+                    }
+                    this.handlePokerAction(ws, actionResult.data);
+                    return;
+                }
             default:
                 // Ignore other message types for now
                 return;
@@ -263,7 +283,9 @@ export class GameServer {
         }
         this.pokerLobbyState.inGame = true;
         this.broadcastPokerLobbyState();
-        // NOTE: Full poker game flow is out of scope here; this establishes lobby/start scaffolding.
+        
+        // Initialize poker game
+        this.initializePokerGame();
     }
 
     private broadcastPokerLobbyState() {
@@ -271,6 +293,213 @@ export class GameServer {
             key: GameMessageKey.POKER_LOBBY_STATE,
             v: MESSAGE_VERSION,
             payload: this.pokerLobbyState,
+            ts: Date.now(),
+        } as const;
+        const message = JSON.stringify(envelope);
+        const sockets = this.lobbies.get(this.pokerLobbyId) ?? [];
+        sockets.forEach(s => {
+            if (s.readyState === WebSocket.OPEN) {
+                s.send(message);
+            }
+        });
+    }
+
+    private initializePokerGame() {
+        const { minBet, maxBet } = this.pokerLobbyState.settings;
+        const players: PlayerState[] = this.pokerLobbyState.players.map((u) => ({
+            user: u,
+            chips: u.balance ?? maxBet,
+            hole: [],
+            hasFolded: false,
+            isAllIn: false,
+            currentBet: 0,
+        }));
+
+        this.pokerGameState = {
+            players,
+            community: [],
+            pot: 0,
+            street: 'preflop',
+            dealerIndex: 0,
+            currentPlayerIndex: players.length > 1 ? 1 : 0,
+            currentBet: 0,
+            minBet,
+            maxBet,
+        };
+
+        // Initialize and shuffle deck
+        this.pokerDeck = new Deck();
+        this.pokerDeck.shuffle();
+
+        // Deal hole cards
+        this.dealHoleCards();
+        
+        // Broadcast initial game state
+        this.broadcastPokerState();
+    }
+
+    private dealHoleCards() {
+        if (!this.pokerGameState || !this.pokerDeck) return;
+        
+        // Deal 2 cards to each player
+        for (let r = 0; r < 2; r++) {
+            for (let i = 0; i < this.pokerGameState.players.length; i++) {
+                const card = this.pokerDeck.dealCard();
+                if (card) {
+                    this.pokerGameState.players[i].hole.push(card);
+                }
+            }
+        }
+    }
+
+    private handlePokerAction(ws: WebSocket, action: PokerAction) {
+        if (!this.pokerGameState || !this.pokerLobbyState.inGame) {
+            console.warn('No active poker game');
+            return;
+        }
+
+        const currentPlayer = this.pokerGameState.players[this.pokerGameState.currentPlayerIndex];
+        
+        // Verify it's the correct player's turn
+        if (currentPlayer.user.name !== action.user.name) {
+            console.warn(`Not ${action.user.name}'s turn`);
+            return;
+        }
+
+        // Process the action
+        switch (action.actionType) {
+            case 'fold':
+                this.handleFold();
+                break;
+            case 'check':
+                this.handleCheck();
+                break;
+            case 'call':
+                this.handleCall();
+                break;
+            case 'bet':
+            case 'raise':
+                if (action.amount !== undefined) {
+                    this.handleBetOrRaise(action.amount);
+                }
+                break;
+        }
+
+        // Check if betting round is complete
+        if (this.isBettingRoundComplete()) {
+            this.advanceStreet();
+        }
+
+        // Broadcast updated state
+        this.broadcastPokerState();
+    }
+
+    private handleFold() {
+        if (!this.pokerGameState) return;
+        const currentIdx = this.pokerGameState.currentPlayerIndex;
+        this.pokerGameState.players[currentIdx].hasFolded = true;
+        this.pokerGameState.currentPlayerIndex = this.nextPlayerIndex(currentIdx);
+    }
+
+    private handleCheck() {
+        if (!this.pokerGameState) return;
+        const currentIdx = this.pokerGameState.currentPlayerIndex;
+        this.pokerGameState.currentPlayerIndex = this.nextPlayerIndex(currentIdx);
+    }
+
+    private handleCall() {
+        if (!this.pokerGameState) return;
+        const currentIdx = this.pokerGameState.currentPlayerIndex;
+        const player = this.pokerGameState.players[currentIdx];
+        const toCall = Math.max(0, this.pokerGameState.currentBet - player.currentBet);
+        
+        const pay = Math.min(toCall, player.chips);
+        player.chips -= pay;
+        player.currentBet += pay;
+        player.isAllIn = player.chips === 0;
+        this.pokerGameState.pot += pay;
+        
+        this.pokerGameState.currentPlayerIndex = this.nextPlayerIndex(currentIdx);
+    }
+
+    private handleBetOrRaise(amount: number) {
+        if (!this.pokerGameState) return;
+        const currentIdx = this.pokerGameState.currentPlayerIndex;
+        const player = this.pokerGameState.players[currentIdx];
+        
+        const amt = Math.max(this.pokerGameState.minBet, Math.min(amount, player.chips));
+        if (amt <= 0) return;
+        
+        player.chips -= amt;
+        player.currentBet += amt;
+        player.isAllIn = player.chips === 0;
+        this.pokerGameState.pot += amt;
+        this.pokerGameState.currentBet = Math.max(this.pokerGameState.currentBet, player.currentBet);
+        
+        this.pokerGameState.currentPlayerIndex = this.nextPlayerIndex(currentIdx);
+    }
+
+    private nextPlayerIndex(from: number): number {
+        if (!this.pokerGameState) return from;
+        const n = this.pokerGameState.players.length;
+        for (let k = 1; k <= n; k++) {
+            const idx = (from + k) % n;
+            const p = this.pokerGameState.players[idx];
+            if (!p.hasFolded && !p.isAllIn) return idx;
+        }
+        return from;
+    }
+
+    private isBettingRoundComplete(): boolean {
+        if (!this.pokerGameState) return false;
+        
+        const activePlayers = this.pokerGameState.players.filter(p => !p.hasFolded && !p.isAllIn);
+        if (activePlayers.length === 0) return true;
+        
+        // All active players have matched the current bet
+        return activePlayers.every(p => p.currentBet === this.pokerGameState!.currentBet);
+    }
+
+    private advanceStreet() {
+        if (!this.pokerGameState || !this.pokerDeck) return;
+        
+        switch (this.pokerGameState.street) {
+            case 'preflop':
+                // Deal flop (3 cards)
+                const flop = this.pokerDeck.dealCards(3);
+                this.pokerGameState.community.push(...flop);
+                this.pokerGameState.street = 'flop';
+                break;
+            case 'flop':
+                // Deal turn (1 card)
+                const turn = this.pokerDeck.dealCard();
+                if (turn) this.pokerGameState.community.push(turn);
+                this.pokerGameState.street = 'turn';
+                break;
+            case 'turn':
+                // Deal river (1 card)
+                const river = this.pokerDeck.dealCard();
+                if (river) this.pokerGameState.community.push(river);
+                this.pokerGameState.street = 'river';
+                break;
+            case 'river':
+                this.pokerGameState.street = 'showdown';
+                break;
+        }
+
+        // Reset per-street bets
+        this.pokerGameState.currentBet = 0;
+        this.pokerGameState.players.forEach(p => p.currentBet = 0);
+        this.pokerGameState.currentPlayerIndex = (this.pokerGameState.dealerIndex + 1) % this.pokerGameState.players.length;
+    }
+
+    private broadcastPokerState() {
+        if (!this.pokerGameState) return;
+        
+        const envelope = {
+            key: GameMessageKey.POKER_STATE,
+            v: MESSAGE_VERSION,
+            payload: this.pokerGameState,
             ts: Date.now(),
         } as const;
         const message = JSON.stringify(envelope);

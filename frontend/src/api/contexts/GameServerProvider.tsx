@@ -225,6 +225,12 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
                         }
                         break;
                     }
+                    case GameMessageKey.POKER_STATE: {
+                        // Forward poker state updates to any listeners
+                        // The PokerTable component will handle this via custom event
+                        window.dispatchEvent(new CustomEvent('poker-state-update', { detail: msg.payload }));
+                        break;
+                    }
                     default:
                         // Ignore other message types for now
                         console.warn('Received unhandled message key:', msg.key);
@@ -313,6 +319,21 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         ws.send(JSON.stringify(envelope));
     }, [ws]);
 
+    const sendPokerAction = useCallback((actionType: 'fold' | 'check' | 'call' | 'bet' | 'raise', amount?: number) => {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !userRef.current) return;
+        const envelope = {
+            key: GameMessageKey.POKER_ACTION,
+            v: MESSAGE_VERSION,
+            payload: {
+                user: userRef.current,
+                actionType,
+                amount,
+            },
+            ts: Date.now(),
+        } as const;
+        ws.send(JSON.stringify(envelope));
+    }, [ws]);
+
     // Implementation of the GameServerProvider
     return (
         <GameServerContext.Provider value={{
@@ -335,6 +356,7 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             joinPoker,
             leavePoker,
             startPoker,
+            sendPokerAction,
         }}>
             {children}
         </GameServerContext.Provider>
