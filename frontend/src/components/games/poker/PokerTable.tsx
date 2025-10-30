@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useUserData } from '@/hooks/useUserData';
 import { CardBack, CardView } from './CardView';
 import { BettingControls } from './BettingControls';
-import { Deck, type PlayerState, type TableState } from '~middleware/cards';
+import { Deck, Street, type PlayerState, type TableState } from '~middleware/cards';
 import type { User } from '~middleware/models';
 
 interface PokerTableProps {
@@ -18,6 +18,7 @@ interface PokerTableProps {
     maxBet: number;
 }
 
+// TODO: move out magic values to config/separate file
 export function PokerTable({ users, minBet, maxBet }: PokerTableProps) {
     const { user: me } = useUserData();
     const [deck, setDeck] = useState(new Deck());
@@ -26,8 +27,8 @@ export function PokerTable({ users, minBet, maxBet }: PokerTableProps) {
     // Re-initialize when users change (e.g., someone joins while in lobby)
     useEffect(() => {
         deck.shuffle();
-    setState(initialState(users, minBet, maxBet));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        setState(initialState(users, minBet, maxBet));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [users.map(u => u.name).join('|')]);
 
     const current = state.players[state.currentPlayerIndex];
@@ -60,31 +61,31 @@ export function PokerTable({ users, minBet, maxBet }: PokerTableProps) {
         setState(prev => {
             const next = { ...prev, community: [...prev.community] };
             switch (prev.street) {
-                case 'preflop': {
+                case Street.Preflop: {
                     const cards = deck.dealCards(3);
                     next.community.push(...cards);
-                    next.street = 'flop';
+                    next.street = Street.Flop;
                     break;
                 }
-                case 'flop': {
+                case Street.Flop: {
                     const card = deck.dealCard();
                     if (!card) throw new Error('Failed to draw card');
                     next.community.push(card);
-                    next.street = 'turn';
+                    next.street = Street.Turn;
                     break;
                 }
-                case 'turn': {
+                case Street.Turn: {
                     const card = deck.dealCard();
                     if (!card) throw new Error('Failed to draw card');
                     next.community.push(card);
-                    next.street = 'river';
+                    next.street = Street.River;
                     break;
                 }
-                case 'river': {
+                case Street.River: {
                     const card = deck.dealCard();
                     if (!card) throw new Error('Failed to draw card');
                     next.community.push(card);
-                    next.street = 'showdown';
+                    next.street = Street.Showdown;
                     break;
                 }
             }

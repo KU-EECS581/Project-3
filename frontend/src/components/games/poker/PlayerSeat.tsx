@@ -8,6 +8,7 @@
 import { CardBack, CardView } from './CardView';
 import type { PlayerState } from '~middleware/cards';
 
+// TODO: move out magic values to config/separate file
 export function PlayerSeat({
     player,
     isMe,

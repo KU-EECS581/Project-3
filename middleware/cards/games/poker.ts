@@ -8,7 +8,15 @@
 import { type User } from "../../models";
 import { Card } from "../Card";
 
-export type Street = 'preflop' | 'flop' | 'turn' | 'river' | 'showdown';
+export const Street = {
+    Preflop: 'preflop',
+    Flop: 'flop',
+    Turn: 'turn',
+    River: 'river',
+    Showdown: 'showdown'
+} as const;
+
+export type Street = typeof Street[keyof typeof Street];
 
 export interface PlayerState {
     user: User;
