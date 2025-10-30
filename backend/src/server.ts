@@ -469,7 +469,15 @@ export class GameServer {
         if (!this.pokerGameState) return false;
         
         const activePlayers = this.pokerGameState.players.filter(p => !p.hasFolded && !p.isAllIn);
-        if (activePlayers.length === 0) return true;
+        
+        // If only one player left or no active players, hand should end
+        const playersNotFolded = this.pokerGameState.players.filter(p => !p.hasFolded);
+        if (playersNotFolded.length <= 1) {
+            // TODO: Implement hand completion and pot distribution
+            return false; // For now, don't advance - needs proper hand ending logic
+        }
+        
+        if (activePlayers.length === 0) return true; // All are all-in, advance to showdown
         
         // All active players must have acted this round
         const allActed = activePlayers.every(p => this.actionsThisRound.has(p.user.name));
@@ -509,7 +517,10 @@ export class GameServer {
         // Reset per-street bets and action tracking
         this.pokerGameState.currentBet = 0;
         this.pokerGameState.players.forEach(p => p.currentBet = 0);
-        this.pokerGameState.currentPlayerIndex = (this.pokerGameState.dealerIndex + 1) % this.pokerGameState.players.length;
+        
+        // Set current player to first active player after dealer
+        this.pokerGameState.currentPlayerIndex = this.nextPlayerIndex(this.pokerGameState.dealerIndex);
+        
         this.actionsThisRound.clear();
     }
 
