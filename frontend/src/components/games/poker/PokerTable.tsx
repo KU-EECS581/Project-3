@@ -9,8 +9,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useUserData } from '@/hooks/useUserData';
 import { CardBack, CardView } from './CardView';
 import { BettingControls } from './BettingControls';
-import { Deck, type PlayerState, type TableState } from '~middleware/cards';
+import { type TableState } from '~middleware/cards';
 import type { User } from '~middleware/models';
+import { useGameServer } from '@/api';
 
 interface PokerTableProps {
     users: User[];
@@ -18,158 +19,52 @@ interface PokerTableProps {
     maxBet: number;
 }
 
-export function PokerTable({ users, minBet, maxBet }: PokerTableProps) {
+export function PokerTable({ }: PokerTableProps) {
     const { user: me } = useUserData();
-    const [deck, setDeck] = useState(new Deck());
-    const [state, setState] = useState<TableState>(() => initialState(users, minBet, maxBet));
+    const server = useGameServer();
+    const [state, setState] = useState<TableState | null>(null);
 
-    // Re-initialize when users change (e.g., someone joins while in lobby)
+    // Listen for poker state updates from backend
     useEffect(() => {
-        deck.shuffle();
-    setState(initialState(users, minBet, maxBet));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [users.map(u => u.name).join('|')]);
+        const handleStateUpdate = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            setState(customEvent.detail);
+        };
+        
+        window.addEventListener('poker-state-update', handleStateUpdate);
+        return () => window.removeEventListener('poker-state-update', handleStateUpdate);
+    }, []);
+
+    // Show loading state while waiting for initial state
+    if (!state) {
+        return <div style={{ padding: 20, color: '#eee' }}>Waiting for game state...</div>;
+    }
 
     const current = state.players[state.currentPlayerIndex];
     const toCall = Math.max(0, state.currentBet - current.currentBet);
     const canCheck = toCall === 0;
 
-    function dealHoleCards(next: TableState, d: Deck): [TableState, Deck] {
-        const updatedPlayers: PlayerState[] = next.players.map(p => ({ ...p, hole: [] }));
-        for (let r = 0; r < 2; r++) {
-            for (let i = 0; i < updatedPlayers.length; i++) {
-                const c  = d.dealCard();
-                if (!c) continue; // deck exhausted?
-                updatedPlayers[i].hole.push(c);
-            }
-        }
-        return [{ ...next, players: updatedPlayers }, d];
-    }
-
-    useEffect(() => {
-        // If no hole cards yet, deal them
-        if (state.players.every(p => p.hole.length === 0)) {
-            const [dealt, rest] = dealHoleCards(state, deck);
-            setDeck(rest);
-            setState(dealt);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    function advanceStreet() {
-        setState(prev => {
-            const next = { ...prev, community: [...prev.community] };
-            switch (prev.street) {
-                case 'preflop': {
-                    const cards = deck.dealCards(3);
-                    next.community.push(...cards);
-                    next.street = 'flop';
-                    break;
-                }
-                case 'flop': {
-                    const card = deck.dealCard();
-                    if (!card) throw new Error('Failed to draw card');
-                    next.community.push(card);
-                    next.street = 'turn';
-                    break;
-                }
-                case 'turn': {
-                    const card = deck.dealCard();
-                    if (!card) throw new Error('Failed to draw card');
-                    next.community.push(card);
-                    next.street = 'river';
-                    break;
-                }
-                case 'river': {
-                    const card = deck.dealCard();
-                    if (!card) throw new Error('Failed to draw card');
-                    next.community.push(card);
-                    next.street = 'showdown';
-                    break;
-                }
-            }
-
-            // Reset per-street bets
-            next.currentBet = 0;
-            next.players = next.players.map(p => ({ ...p, currentBet: 0 }));
-            // First to act = left of dealer (simplified)
-            next.currentPlayerIndex = (next.dealerIndex + 1) % next.players.length;
-            return next;
-        });
-    }
-
-    function nextPlayerIndex(from: number): number {
-        const n = state.players.length;
-        for (let k = 1; k <= n; k++) {
-            const idx = (from + k) % n;
-            const p = state.players[idx];
-            if (!p.hasFolded && !p.isAllIn) return idx;
-        }
-        return from;
-    }
+    const isMyTurn = me?.name && current.user.name === me.name;
 
     function onCheck() {
-        if (!canCheck) return;
-        setState(prev => ({ ...prev, currentPlayerIndex: nextPlayerIndex(prev.currentPlayerIndex) }));
+        if (!canCheck || !isMyTurn) return;
+        server.sendPokerAction('check');
     }
 
     function onCall() {
-        if (toCall <= 0) return;
-        setState(prev => {
-            const players = prev.players.map((p, idx) => {
-                if (idx !== prev.currentPlayerIndex) return p;
-                const pay = Math.min(toCall, p.chips);
-                return {
-                    ...p,
-                    chips: p.chips - pay,
-                    currentBet: p.currentBet + pay,
-                    isAllIn: p.chips - pay === 0,
-                };
-            });
-            const nextPot = prev.pot + Math.min(toCall, current.chips);
-            return {
-                ...prev,
-                players,
-                pot: nextPot,
-                currentPlayerIndex: nextPlayerIndex(prev.currentPlayerIndex)
-            };
-        });
+        if (toCall <= 0 || !isMyTurn) return;
+        server.sendPokerAction('call');
     }
 
     function onBetOrRaise(amount: number) {
-        const amt = Math.max(state.minBet, Math.min(amount, current.chips));
-        if (amt <= 0) return;
-        setState(prev => {
-            const players = prev.players.map((p, idx) => {
-                if (idx !== prev.currentPlayerIndex) return p;
-                return {
-                    ...p,
-                    chips: p.chips - amt,
-                    currentBet: p.currentBet + amt,
-                    isAllIn: p.chips - amt === 0,
-                };
-            });
-            const actor = players[prev.currentPlayerIndex];
-            const newCurrentBet = Math.max(prev.currentBet, actor.currentBet);
-            return {
-                ...prev,
-                players,
-                pot: prev.pot + amt,
-                currentBet: newCurrentBet,
-                currentPlayerIndex: nextPlayerIndex(prev.currentPlayerIndex)
-            };
-        });
+        if (!isMyTurn || !state) return;
+        const actionType = state.currentBet > 0 ? 'raise' : 'bet';
+        server.sendPokerAction(actionType, amount);
     }
 
     function onFold() {
-        setState(prev => {
-            const players = prev.players.map((p, idx) => idx === prev.currentPlayerIndex ? { ...p, hasFolded: true } : p);
-            return {
-                ...prev,
-                players,
-                currentPlayerIndex: nextPlayerIndex(prev.currentPlayerIndex)
-            };
-        });
+        if (!isMyTurn) return;
+        server.sendPokerAction('fold');
     }
 
     const seats = useMemo(() => state.players.map((p, i) => {
@@ -193,7 +88,7 @@ export function PokerTable({ users, minBet, maxBet }: PokerTableProps) {
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
                 {seats.map(({ p, isMe, isTurn, key }) => (
                     <div key={key}>
-                        <div style={{ textAlign: 'center', color: '#aaa', marginBottom: 4 }}>{isTurn ? 'Your Turn' : ' '}</div>
+                        <div style={{ textAlign: 'center', color: '#aaa', marginBottom: 4 }}>{isTurn ? (isMe ? '🎯 Your Turn' : '⏳ Turn') : ' '}</div>
                         <div>
                             {/* Reuse PlayerSeat-like inline to avoid extra imports */}
                             <div style={{
@@ -228,45 +123,21 @@ export function PokerTable({ users, minBet, maxBet }: PokerTableProps) {
                 ))}
             </div>
 
-            <div style={{ marginTop: 8, padding: 8, borderTop: '1px solid #444', color: '#eee' }}>
-                <div style={{ marginBottom: 6, fontWeight: 600 }}>Actions ({current.user.name})</div>
-                <BettingControls
-                    toCall={toCall}
-                    minBet={state.minBet}
-                    maxBet={current.chips}
-                    canCheck={canCheck}
-                    onCheck={onCheck}
-                    onCall={onCall}
-                    onBetOrRaise={onBetOrRaise}
-                    onFold={onFold}
-                />
-                <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                    <button onClick={advanceStreet}>Next Street (debug)</button>
+            {isMyTurn && (
+                <div style={{ marginTop: 8, padding: 8, borderTop: '1px solid #444', color: '#eee' }}>
+                    <div style={{ marginBottom: 6, fontWeight: 600 }}>Your Turn</div>
+                    <BettingControls
+                        toCall={toCall}
+                        minBet={state.minBet}
+                        maxBet={current.chips}
+                        canCheck={canCheck}
+                        onCheck={onCheck}
+                        onCall={onCall}
+                        onBetOrRaise={onBetOrRaise}
+                        onFold={onFold}
+                    />
                 </div>
-            </div>
+            )}
         </div>
     );
-}
-
-function initialState(users: User[], minBet: number, maxBet: number): TableState {
-    const players: PlayerState[] = users.map((u) => ({
-        user: u,
-        chips: u.balance ?? maxBet,
-        hole: [],
-        hasFolded: false,
-        isAllIn: false,
-        currentBet: 0,
-    }));
-
-    return {
-        players,
-        community: [],
-        pot: 0,
-        street: 'preflop',
-        dealerIndex: 0,
-        currentPlayerIndex: players.length > 1 ? 1 : 0, // left of dealer starts
-        currentBet: 0,
-        minBet,
-        maxBet,
-    };
 }

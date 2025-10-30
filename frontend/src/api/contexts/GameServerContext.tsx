@@ -30,6 +30,7 @@ export interface GameServerContextProps {
     joinPoker: () => void;
     leavePoker: () => void;
     startPoker: () => void;
+    sendPokerAction: (actionType: 'fold' | 'check' | 'call' | 'bet' | 'raise', amount?: number) => void;
 }
 
 export const GameServerContext = createContext<GameServerContextProps | undefined>(undefined);

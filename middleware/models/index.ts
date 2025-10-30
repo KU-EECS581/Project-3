@@ -12,3 +12,5 @@ export * from './GameMessage';
 export * from './PokerGameSettings';
 export * from './PokerLobbyState';
 export * from './StartPokerMessage';
+export * from './PokerAction';
+export * from './PokerState';
