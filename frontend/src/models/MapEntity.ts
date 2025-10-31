@@ -10,7 +10,7 @@ import type { MapEntityKeyType } from "@/enums";
 export interface MapEntity {
     key: MapEntityKeyType;
     name: string;
-    type: 'shop' | 'game' | 'other';
+    type: 'shop' | 'game' | 'exit' | 'other';
     spritePath?: string;
     route?: string;
     

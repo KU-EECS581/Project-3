@@ -8,7 +8,7 @@
 import type { ServerConnectionRequest } from "@/api";
 import type { PlayerCharacter } from "@/models";
 import { createContext } from "react";
-import type { MovementMessage } from "~middleware/models";
+import type { MovementMessage, User, PokerGameStateMessage } from "~middleware/models";
 
 export interface GameServerContextProps {
     isConnecting: boolean;
@@ -25,6 +25,18 @@ export interface GameServerContextProps {
     host: string;
     port: number;
     error: string | undefined;
+    pokerPlayers: User[];
+    pokerInGame: boolean;
+    pokerState?: PokerGameStateMessage;
+    joinPoker: () => void;
+    leavePoker: () => void;
+    startPoker: () => void;
+    endPoker: () => void;
+    pokerCheck: () => void;
+    pokerCall: () => void;
+    pokerBet: (amount: number) => void;
+    pokerRaise: (amount: number) => void;
+    pokerFold: () => void;
 }
 
 export const GameServerContext = createContext<GameServerContextProps | undefined>(undefined);

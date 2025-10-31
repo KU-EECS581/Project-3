@@ -8,9 +8,14 @@
 import { useCallback } from "react";
 import { useNavigate } from "react-router";
 import { RoutePath } from "../enums";
+import { PokerGame } from "@/components/games/PokerGame";
+import { useConnectionCheck } from "@/hooks";
 
 export function PokerGamePage() {
     const navigate = useNavigate();
+
+    // Check connection status and redirect if disconnected
+    useConnectionCheck();
 
     const handleBackToMap = useCallback(() => {
         navigate(RoutePath.MAP); // Navigate back to the previous page (game world)
@@ -18,8 +23,8 @@ export function PokerGamePage() {
 
     return (
         <div>
-            <h1>Welcome to the Poker Game</h1>
-            {/* Add poker game components here */}
+            <h1>Poker</h1>
+            <PokerGame />
             <button onClick={handleBackToMap}>Back to Map</button>
         </div>
     );

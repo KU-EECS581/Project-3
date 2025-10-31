@@ -16,8 +16,8 @@ export const DEFAULT_PORT = -1; // Invalid port to force user input
 export const DEFAULT_USER: User = { name: 'Player1', balance: 1000, dateCreated: new Date(), dateUpdated: new Date() }; // Placeholder user
 
 export const CHARACTER_MOVEMENT_DELAY_MS = 500;
-export const CHARACTER_WIDTH = 32;
-export const CHARACTER_HEIGHT = 32;
+export const CHARACTER_WIDTH = 24;
+export const CHARACTER_HEIGHT = 24;
 
 export const MAP_WIDTH = 768; // Based on the placeholder image
 export const MAP_HEIGHT = 512; // Based on the placeholder image
@@ -62,7 +62,7 @@ export const MAP_ENTITIES: MapEntity[] = [
         type: "game",
         spritePath: "/assets/sprites/poker_table.png",
         route: RoutePath.MAP_POKER,
-        pos: { x: 15, y: 100 },
+        pos: { x: 15, y: 125 },
         size: {
             width: 125,
             height: 90,
@@ -74,10 +74,10 @@ export const MAP_ENTITIES: MapEntity[] = [
         type: "game",
         spritePath: "/assets/sprites/blackjack_table.png",
         route: RoutePath.MAP_BLACKJACK,
-        pos: { x: 15, y: 200 },
+        pos: { x: 10, y: 275 },
         size: {
-            width: 145,
-            height: 100,
+            width: 170,
+            height: 125,
         },
     },
     {
@@ -90,6 +90,17 @@ export const MAP_ENTITIES: MapEntity[] = [
         size: {
             width: 210,
             height: 125,
+        },
+    },
+    {
+        key: MapEntityKey.EXIT,
+        name: "Exit",
+        type: "exit",
+        spritePath: "/assets/sprites/exit.png",
+        pos: { x: 110, y: 5 },
+        size: {
+            width: 100,
+            height: 85,
         },
     }
 ]

@@ -7,5 +7,3 @@
 
 export * from './UserDataContext';
 export * from './UserDataProvider';
-export * from './GameServerContext';
-export * from './GameServerProvider';

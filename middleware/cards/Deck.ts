@@ -77,6 +77,16 @@ export class Deck {
         return card;
     }
 
+    dealCards(count: number): Card[] {
+        const dealtCards: Card[] = [];
+        for (let i = 0; i < count; i++) {
+            const card = this.dealCard();
+            if (card) dealtCards.push(card);
+            else break;
+        }
+        return dealtCards;
+    }
+
     // Reset the deck to a full, unshuffled state
     reset(): void {
         this.cards = [];
