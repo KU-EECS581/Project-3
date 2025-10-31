@@ -4,6 +4,7 @@
  * @author Aiden Burke
  * @date 2025-10-27
  */
+import * as z from 'zod';
 
 // Enums objs for card suits and ranks
 export const Suit =  {
@@ -79,6 +80,12 @@ export function isBlackSuit(suit: Suit) {
 export function isRedSuit(suit: Suit) {
     return suit === Suit.HEARTS || suit === Suit.DIAMONDS;
 }
+
+// Zod schema for serialization of Card
+export const CardSchema = z.object({
+    suit: z.nativeEnum(Suit as unknown as Record<string, string>).or(z.enum(["HEARTS","DIAMONDS","CLUBS","SPADES"])),
+    rank: z.enum(["2","3","4","5","6","7","8","9","10","JACK","QUEEN","KING","ACE"]),
+});
 
 
 // Card class with comparative logic based on rank

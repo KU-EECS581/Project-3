@@ -71,7 +71,7 @@ export function PokerGame({
             { !isGameStarted && <PokerGameLobby settings={settings} onGameStarted={handleStartGame} onSettingsChanged={handleSettingsChanged} /> }
             { isGameStarted && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
-                    <PokerTable users={server.pokerPlayers} minBet={settings.minBet} maxBet={settings.maxBet} />
+                    <PokerTable />
                     <button onClick={handleEndGame}>End Game (debug button)</button>
                 </div>
             )}

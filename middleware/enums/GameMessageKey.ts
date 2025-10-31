@@ -13,7 +13,10 @@ export const GameMessageKeys = [
     "JOIN_POKER",
     "LEAVE_POKER",
     "START_POKER",
-    "POKER_LOBBY_STATE"
+    "POKER_LOBBY_STATE",
+    // New keys for poker game synchronization
+    "POKER_GAME_STATE",
+    "POKER_ACTION"
 ] as const;
 
 export type GameMessageKeyType = typeof GameMessageKeys[number];
@@ -26,5 +29,7 @@ export const GameMessageKey: Record<GameMessageKeyType, GameMessageKeyType> = {
     JOIN_POKER: "JOIN_POKER",
     LEAVE_POKER: "LEAVE_POKER",
     START_POKER: "START_POKER",
-    POKER_LOBBY_STATE: "POKER_LOBBY_STATE"
+    POKER_LOBBY_STATE: "POKER_LOBBY_STATE",
+    POKER_GAME_STATE: "POKER_GAME_STATE",
+    POKER_ACTION: "POKER_ACTION"
 };

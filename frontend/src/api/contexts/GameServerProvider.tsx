@@ -8,9 +8,10 @@
 import { MAX_PORT, MIN_PORT, type ServerConnectionRequest } from "@/api";
 import { GameServerContext } from "./GameServerContext";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useUserData } from "@/hooks/useUserData";
 import { DEFAULT_CHARACTER_X, DEFAULT_CHARACTER_Y, DEFAULT_HOST, DEFAULT_PORT, DEFAULT_USER } from "@/constants";
 import type { PlayerCharacter } from "@/models";
-import { AnyGameMessageSchema, MESSAGE_VERSION, type MovementMessage, MovementMessageSchema, type User, PokerLobbyStateSchema } from "~middleware/models";
+import { AnyGameMessageSchema, MESSAGE_VERSION, type MovementMessage, MovementMessageSchema, type User, PokerLobbyStateSchema, TableStateSchema } from "~middleware/models";
 import { GameMessageKey } from "~middleware/enums";
 
 export function GameServerProvider({children}: {children: React.ReactNode}) {
@@ -25,11 +26,21 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
     const userRef = useRef(request.user);
     const [pokerPlayers, setPokerPlayers] = useState<User[]>([]);
     const [pokerInGame, setPokerInGame] = useState(false);
+    const [pokerState, setPokerState] = useState<ReturnType<typeof TableStateSchema.parse> | undefined>(undefined);
     
     // Keep a ref to the latest user without retriggering socket effect
     useEffect(() => {
         userRef.current = request.user;
     }, [request.user]);
+
+    // Keep WebSocket user aligned with app user profile
+    const { user: profileUser } = useUserData();
+    useEffect(() => {
+        if (profileUser && (!request.user || profileUser.name !== request.user.name)) {
+            setRequest((prev) => ({ ...prev, user: profileUser }));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [profileUser?.name]);
 
     /**
      * Checks each part of the ServerConnectionRequest for validity.
@@ -225,6 +236,13 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
                         }
                         break;
                     }
+                    case GameMessageKey.POKER_GAME_STATE: {
+                        const gs = TableStateSchema.safeParse(msg.payload);
+                        if (gs.success) {
+                            setPokerState(gs.data);
+                        }
+                        break;
+                    }
                     default:
                         // Ignore other message types for now
                         console.warn('Received unhandled message key:', msg.key);
@@ -313,6 +331,24 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         ws.send(JSON.stringify(envelope));
     }, [ws]);
 
+    // Poker actions
+    const pokerAction = useCallback((action: string, amount?: number) => {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !userRef.current) return;
+        const envelope = {
+            key: GameMessageKey.POKER_ACTION,
+            v: MESSAGE_VERSION,
+            payload: { user: userRef.current, action, amount },
+            ts: Date.now(),
+        } as const;
+        ws.send(JSON.stringify(envelope));
+    }, [ws]);
+
+    const pokerCheck = useCallback(() => pokerAction('CHECK'), [pokerAction]);
+    const pokerCall = useCallback(() => pokerAction('CALL'), [pokerAction]);
+    const pokerBet = useCallback((amount: number) => pokerAction('BET', amount), [pokerAction]);
+    const pokerRaise = useCallback((amount: number) => pokerAction('RAISE', amount), [pokerAction]);
+    const pokerFold = useCallback(() => pokerAction('FOLD'), [pokerAction]);
+
     // Implementation of the GameServerProvider
     return (
         <GameServerContext.Provider value={{
@@ -332,9 +368,15 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             error,
             pokerPlayers,
             pokerInGame,
+            pokerState,
             joinPoker,
             leavePoker,
             startPoker,
+            pokerCheck,
+            pokerCall,
+            pokerBet,
+            pokerRaise,
+            pokerFold,
         }}>
             {children}
         </GameServerContext.Provider>

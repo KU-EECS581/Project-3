@@ -1,4 +1,6 @@
-import { type Card, isRedSuit, rankToDisplay, suitToSymbol } from '~middleware/cards';
+import { type Rank, type Suit, isRedSuit, rankToDisplay, suitToSymbol } from '~middleware/cards';
+
+type SimpleCard = { suit: Suit; rank: Rank };
 
 export function CardBack({ size = 60 }: { size?: number }) {
     return (
@@ -13,7 +15,7 @@ export function CardBack({ size = 60 }: { size?: number }) {
     );
 }
 
-export function CardView({ card, size = 60 }: { card: Card; size?: number }) {
+export function CardView({ card, size = 60 }: { card: SimpleCard; size?: number }) {
     const color = isRedSuit(card.suit) ? '#c22' : '#111';
     return (
         <div style={{
