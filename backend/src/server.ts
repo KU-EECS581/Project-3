@@ -228,6 +228,16 @@ export class GameServer {
                     this.handleStartPoker(ws);
                     return;
                 }
+            case GameMessageKey.END_POKER:
+                {
+                    // Anyone can request returning to lobby after a game ends
+                    this.stopTurnTimer();
+                    this.pokerGameState && ((this.pokerGameState as unknown as { gameOver?: boolean }).gameOver = true);
+                    this.broadcastPokerGameState();
+                    this.pokerLobbyState.inGame = false;
+                    this.broadcastPokerLobbyState();
+                    return;
+                }
             case GameMessageKey.POKER_ACTION:
                 {
                     const actionResult = PokerActionMessageSchema.safeParse(envelope.payload);
@@ -543,9 +553,7 @@ export class GameServer {
         (s as unknown as { gameOver?: boolean }).gameOver = true;
         this.stopTurnTimer();
         this.broadcastPokerGameState();
-        // Mark lobby available for a new game
-        this.pokerLobbyState.inGame = false;
-        this.broadcastPokerLobbyState();
+        // Do NOT immediately flip lobby to inGame=false; allow players to see showdown and choose next step.
     }
 
     private cardToSolverString = (c: { suit: Suit; rank: Rank }): string => {

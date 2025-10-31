@@ -331,6 +331,17 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         ws.send(JSON.stringify(envelope));
     }, [ws]);
 
+    const endPoker = useCallback(() => {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !userRef.current) return;
+        const envelope = {
+            key: GameMessageKey.END_POKER,
+            v: MESSAGE_VERSION,
+            payload: { user: userRef.current },
+            ts: Date.now(),
+        } as const;
+        ws.send(JSON.stringify(envelope));
+    }, [ws]);
+
     // Poker actions
     const pokerAction = useCallback((action: string, amount?: number) => {
         if (!ws || ws.readyState !== WebSocket.OPEN || !userRef.current) return;
@@ -372,6 +383,7 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             joinPoker,
             leavePoker,
             startPoker,
+            endPoker,
             pokerCheck,
             pokerCall,
             pokerBet,

@@ -61,5 +61,9 @@ export const LeavePokerGameMessageSchema = createGameMessageSchema('LEAVE_POKER'
 export type StartPokerGameMessage = GameMessage<StartPokerMessage, 'START_POKER'>;
 export const StartPokerGameMessageSchema = createGameMessageSchema('START_POKER', StartPokerMessageSchema);
 
+// END_POKER uses the same simple payload shape as Join/Leave (user announces intent)
+export type EndPokerGameMessage = GameMessage<JoinPokerMessage, 'END_POKER'>;
+export const EndPokerGameMessageSchema = createGameMessageSchema('END_POKER', JoinPokerMessageSchema);
+
 export type PokerLobbyStateGameMessage = GameMessage<PokerLobbyState, 'POKER_LOBBY_STATE'>;
 export const PokerLobbyStateGameMessageSchema = createGameMessageSchema('POKER_LOBBY_STATE', PokerLobbyStateSchema);

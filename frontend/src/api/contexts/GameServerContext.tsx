@@ -31,6 +31,7 @@ export interface GameServerContextProps {
     joinPoker: () => void;
     leavePoker: () => void;
     startPoker: () => void;
+    endPoker: () => void;
     pokerCheck: () => void;
     pokerCall: () => void;
     pokerBet: (amount: number) => void;

@@ -83,7 +83,7 @@ export function PokerTable() {
                             <div>Bet: {p.currentBet}</div>
                             <div style={{ display: 'flex', gap: 6 }}>
                                 {p.hole.length > 0 ? (
-                                    isMe ? (
+                                    (isMe || state?.street === 'showdown' || state?.gameOver) ? (
                                         p.hole.map((c, i) => <CardView key={i} card={c as unknown as {suit: Suit; rank: Rank}} size={50} />)
                                     ) : (
                                         p.hole.map((_, i) => <CardBack key={i} size={50} />)
@@ -106,7 +106,7 @@ export function PokerTable() {
                         <div>Winner: {state.winner?.name ?? 'Unknown'}</div>
                         <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'center' }}>
                             <button onClick={() => server.startPoker()}>Play Again</button>
-                            <button onClick={() => server.leavePoker()}>Back to Lobby</button>
+                            <button onClick={() => server.endPoker()}>Back to Lobby</button>
                         </div>
                     </div>
                 ) : (
