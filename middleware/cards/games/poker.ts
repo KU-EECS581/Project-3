@@ -34,6 +34,13 @@ export interface TableState {
     street: Street;
     dealerIndex: number;
     currentPlayerIndex: number;
+    /**
+     * First player to act on this street (normally left of dealer).
+     * Used to determine completion when no bets occur (check-around case).
+     */
+    streetStartIndex: number;
+    /** Index of the last player who made a bet or raise this street. */
+    lastAggressorIndex?: number;
     currentBet: number; // highest bet this street
     minBet: number;
     maxBet: number;

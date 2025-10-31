@@ -104,6 +104,10 @@ export function PokerTable() {
                     <div style={{ textAlign: 'center' }}>
                         <h2>Game Over</h2>
                         <div>Winner: {state.winner?.name ?? 'Unknown'}</div>
+                        <div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'center' }}>
+                            <button onClick={() => server.startPoker()}>Play Again</button>
+                            <button onClick={() => server.leavePoker()}>Back to Lobby</button>
+                        </div>
                     </div>
                 ) : (
                     <>

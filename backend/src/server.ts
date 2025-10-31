@@ -342,6 +342,8 @@ export class GameServer {
             street: Street.Preflop,
             dealerIndex: 0,
             currentPlayerIndex: players.length > 1 ? 1 : 0,
+            streetStartIndex: players.length > 1 ? 1 : 0,
+            lastAggressorIndex: undefined,
             currentBet: 0,
             minBet: this.pokerLobbyState.settings.minBet,
             maxBet: this.pokerLobbyState.settings.maxBet,
@@ -428,7 +430,14 @@ export class GameServer {
         const s = this.pokerGameState;
         const active = s.players.filter(p => !p.hasFolded && !p.isAllIn);
         if (active.length <= 1) return true;
-        return active.every(p => p.currentBet === s.currentBet);
+        // No bets this street: complete when action returns to streetStartIndex
+        if (s.currentBet === 0) {
+            return s.currentPlayerIndex === s.streetStartIndex;
+        }
+        // Bets occurred: complete when action returns to player after last aggressor and all active have matched currentBet
+        const afterAggressor = this.nextPlayerIndex(s.lastAggressorIndex ?? s.streetStartIndex) % s.players.length;
+        const everyoneMatched = active.every(p => p.currentBet === s.currentBet || p.chips === 0);
+        return everyoneMatched && s.currentPlayerIndex === afterAggressor;
     }
 
     private advanceStreet() {
@@ -462,7 +471,9 @@ export class GameServer {
         // Reset per-street
         s.currentBet = 0;
         s.players = s.players.map(p => ({ ...p, currentBet: 0 }));
-        s.currentPlayerIndex = (s.dealerIndex + 1) % s.players.length;
+        s.currentPlayerIndex = this.nextPlayerIndex(s.dealerIndex);
+        s.streetStartIndex = s.currentPlayerIndex;
+        s.lastAggressorIndex = undefined;
         this.startTurnTimer();
         this.broadcastPokerGameState();
     }
@@ -650,6 +661,7 @@ export class GameServer {
         s.pot += amt;
         s.currentBet = Math.max(s.currentBet, p.currentBet);
         if (p.chips === 0) p.isAllIn = true;
+        s.lastAggressorIndex = i;
         s.currentPlayerIndex = this.nextPlayerIndex(i);
         if (this.isBettingRoundComplete()) {
             this.advanceStreet();
