@@ -253,13 +253,10 @@ export function SlotsGamePage() {
                 <button 
                     onClick={handleBackToMap}
                     className="btn"
->>>>>>> 0e85934 (Enhance poker game with complete No-Limit Texas Hold'em implementation - Fixed minimum raise logic (uses lastRaiseAmount) - Added community card safeguards (max 5 cards) - Removed auto-check for big blind (BB can now check/raise) - Improved betting round completion logic - Enhanced dealer/blind rotation - Fixed showdown and pot distribution)
                 >
                     Back to Map
                 </button>
             </div>
-<<<<<<< HEAD
-=======
 
             <h1 style={{ 
                 color: 'var(--color-primary)', 
