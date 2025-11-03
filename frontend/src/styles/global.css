@@ -92,6 +92,7 @@ html, body {
 
 /* Image glow styling (optional for Casino image) */
 img {
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -145,4 +146,28 @@ input[type="range"].slider::-webkit-slider-thumb:hover {
 input[type="range"].slider::-moz-range-thumb:hover {
   background: #d97706;
   transform: scale(1.1);
+}
+
+/* Blackjack table animations */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Poker current player pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
 }
