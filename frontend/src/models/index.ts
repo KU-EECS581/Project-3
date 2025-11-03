@@ -7,3 +7,4 @@
 
 export * from './PlayerCharacter';
 export * from './MapEntity';
+export * from './BoundingBox';

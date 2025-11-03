@@ -14,6 +14,7 @@ const MapEntityKey = {
     GAME_BLACKJACK: 'blackjack_game',
     SHOP: 'shop',
     BANK: 'bank',
+    EXIT: 'exit',
 } as const;
 
 type MapEntityKeyType = typeof MapEntityKey[keyof typeof MapEntityKey];

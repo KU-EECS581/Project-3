@@ -13,10 +13,8 @@ import { UserSchema, type User } from "./User";
  */
 export interface JoinPokerMessage {
     user: User;
-    gameId: string;
 }
 
 export const JoinPokerMessageSchema = z.object({
     user: UserSchema,
-    gameId: z.string(), // TODO/CONSIDER: use uuid?
 });

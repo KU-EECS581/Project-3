@@ -6,12 +6,12 @@
  */
 
 import { useContext } from "react";
-import { GameServerContext } from "@/contexts/GameServerContext";
+import { GameServerContext } from "../contexts";
 
 export function useGameServer() {
     const context = useContext(GameServerContext);
     if (!context) {
-        throw new Error("useUserData must be used within a UserDataProvider");
+        throw new Error("useGameServer must be used within a GameServerProvider");
     }
     return context;
 }

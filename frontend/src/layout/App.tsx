@@ -5,11 +5,13 @@
  * @date 2025-10-24
  */
 
+import "@styles/global.css";
 import './App.css'
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { RoutePath } from './enums';
 import { TitlePage, CreateCharacterPage, JoinGamePage, GameWorldPage, BankPage, BlackjackGamePage, PokerGamePage, ShopPage, SlotsGamePage } from './pages';
-import { UserDataProvider, GameServerProvider } from '@/contexts';
+import { UserDataProvider } from '@/contexts';
+import { GameServerProvider } from '@/api';
 
 function App() {
   return (
