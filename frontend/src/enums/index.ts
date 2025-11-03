@@ -6,3 +6,5 @@
  */
 
 export * from './MapEntityKey';
+export * from './CardSuit';
+export * from './CardRank';

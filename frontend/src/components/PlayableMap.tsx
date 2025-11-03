@@ -24,17 +24,16 @@ interface PlayableMapProps extends React.HTMLAttributes<HTMLDivElement> {
     debug?: boolean;
 }
 
-export function PlayableMap({ onMovement, players, mouseRef, hidden, onEnterEntity, onExitEntity, debug = false }: PlayableMapProps) {
+export function PlayableMap({ onMovement, players, mouseRef, hidden, self, onEnterEntity, onExitEntity, debug = false }: PlayableMapProps) {
     const [entities] = useState<MapEntity[]>(MAP_ENTITIES);
     const { animatedPositions } = useCharacterAnimations(players);
     useCharacterCollisions({ entities, onEnterEntity, onExitEntity });
-    
 
     return (
         <div
             hidden={hidden}
             ref={mouseRef}
-            className="map-container"
+            className={`map-container ${debug ? 'debug' : ''}`}
             style={{
                 width: `${MAP_WIDTH}px`,
                 height: `${MAP_HEIGHT}px`
@@ -46,7 +45,12 @@ export function PlayableMap({ onMovement, players, mouseRef, hidden, onEnterEnti
             {players.map((player) => {
                 const animatedPos = animatedPositions.get(player.user.name) || { x: player.x, y: player.y };
                 return (
-                    <PlayerEntityComponent player={player} key={player.user.name} animatedPos={animatedPos} debug={debug} />
+                    <PlayerEntityComponent 
+                        player={player} 
+                        key={player.user.name} 
+                        animatedPos={animatedPos} 
+                        debug={debug} 
+                    />
                 );
             })}
         </div>

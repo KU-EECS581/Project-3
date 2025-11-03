@@ -11,3 +11,4 @@ export * from './useCharacterAnimations';
 export * from './useCharacterCollisions';
 export * from './useGameWorld';
 export * from './useConnectionCheck';
+export * from './useDeck';
