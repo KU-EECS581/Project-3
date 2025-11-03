@@ -7,3 +7,5 @@
 
 export * from './UserDataContext';
 export * from './UserDataProvider';
+export * from './DeckContext';
+export * from './DeckProvider';

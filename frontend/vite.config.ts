@@ -12,7 +12,12 @@ export default defineConfig({
       "@components": resolve(__dirname, "./src/components"),
       "@models": resolve(__dirname, "./src/models"),
       "@styles": resolve(__dirname, "./src/styles"),
-      "~middleware": resolve(__dirname, "../middleware")
+      "~middleware": resolve(__dirname, "../middleware"),
+      // Ensure zod resolves from frontend's node_modules when imported from middleware
+      "zod": resolve(__dirname, "./node_modules/zod")
     }
+  },
+  optimizeDeps: {
+    include: ['zod']
   }
 })
