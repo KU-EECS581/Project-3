@@ -573,9 +573,7 @@ export function BlackjackGamePage() {
     useEffect(() => {
         if (cardsDealt && roundInProgress && activeHandIndex === null && !dealerRevealed) {
             // Find first active hand that isn't finished
-            const firstActiveHand = playerHands.findIndex((hand, idx) => 
-                hand.isActive && !hand.isFinished
-            );
+            const firstActiveHand = playerHands.findIndex((hand) => hand.isActive && !hand.isFinished);
             if (firstActiveHand !== -1) {
                 setActiveHandIndex(firstActiveHand);
             }
@@ -1402,5 +1400,4 @@ export function BlackjackGamePage() {
             </div>
         </div>
     );
->>>>>>> 0e85934 (Enhance poker game with complete No-Limit Texas Hold'em implementation - Fixed minimum raise logic (uses lastRaiseAmount) - Added community card safeguards (max 5 cards) - Removed auto-check for big blind (BB can now check/raise) - Improved betting round completion logic - Enhanced dealer/blind rotation - Fixed showdown and pot distribution)
 }
