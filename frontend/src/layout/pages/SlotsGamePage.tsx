@@ -5,7 +5,7 @@
  * @date 2025-10-26
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { RoutePath } from "../enums";
 import { useUserData } from "@/hooks";
@@ -257,7 +257,6 @@ export function SlotsGamePage() {
                     Back to Map
                 </button>
             </div>
-
 
             <h1 style={{ 
                 color: 'var(--color-primary)', 

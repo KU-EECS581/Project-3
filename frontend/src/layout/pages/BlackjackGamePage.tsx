@@ -573,7 +573,9 @@ export function BlackjackGamePage() {
     useEffect(() => {
         if (cardsDealt && roundInProgress && activeHandIndex === null && !dealerRevealed) {
             // Find first active hand that isn't finished
-            const firstActiveHand = playerHands.findIndex((hand) => hand.isActive && !hand.isFinished);
+            const firstActiveHand = playerHands.findIndex((hand, idx) => 
+                hand.isActive && !hand.isFinished
+            );
             if (firstActiveHand !== -1) {
                 setActiveHandIndex(firstActiveHand);
             }
