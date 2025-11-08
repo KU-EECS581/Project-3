@@ -4,12 +4,22 @@
  */
 
 import { useCallback, useEffect, useMemo, useState, useContext } from "react";
-import type { Card } from "~middleware/cards";
+import type { Card as CardModel } from "~middleware/cards";
 import { Deck } from "~middleware/cards";
 import { UserDataContext } from "@/contexts/UserDataContext";
-import type { BJPlayer, BlackjackHand, GamePhase } from "./types";
+import type { BJPlayer, GamePhase } from "./types";
 import { calculateHandValue, getBestHandValue, isBusted, shouldDealerHit } from "./utils";
-import { CardView, CardBack } from "../poker/CardView";
+import { Card } from "@/components/Card";
+import type { Card as CardComponentType } from "@/models";
+import { useBlackjackStats } from "@/hooks/useBlackjackStats";
+
+// Convert middleware card format to Card component format
+function convertCard(card: CardModel): CardComponentType {
+    return {
+        suit: card.suit.toLowerCase() as CardComponentType['suit'],
+        rank: card.rank.toLowerCase() as CardComponentType['rank']
+    };
+}
 
 interface BlackjackGameProps {
   player: BJPlayer;
@@ -22,10 +32,11 @@ const MAX_BET = 500;
 
 export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: BlackjackGameProps) {
   const userCtx = useContext(UserDataContext);
+  const { stats, recordResult } = useBlackjackStats('singleplayer');
   const [phase, setPhase] = useState<GamePhase>("betting");
   const [deck, setDeck] = useState<Deck | null>(null);
-  const [playerHand, setPlayerHand] = useState<Card[]>([]);
-  const [dealerHand, setDealerHand] = useState<Card[]>([]);
+  const [playerHand, setPlayerHand] = useState<CardModel[]>([]);
+  const [dealerHand, setDealerHand] = useState<CardModel[]>([]);
   const [dealerVisible, setDealerVisible] = useState(false);
   const [bet, setBet] = useState(initialBet);
   const [canDoubleDown, setCanDoubleDown] = useState(false);
@@ -51,11 +62,6 @@ export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: Black
     return isBlackjack;
   }, [playerHand]);
 
-  const dealerBlackjack = useMemo(() => {
-    if (dealerHand.length !== 2 || !dealerVisible) return false;
-    const { isBlackjack } = calculateHandValue(dealerHand);
-    return isBlackjack;
-  }, [dealerHand, dealerVisible]);
 
   // Deal initial cards
   const dealInitialCards = useCallback(() => {
@@ -83,16 +89,19 @@ export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: Black
       setPhase("finished");
       if (playerBJ && dealerBJ) {
         setGameResult("push");
+        recordResult("push");
         onGameEnd?.(0, "push");
       } else if (playerBJ) {
         setGameResult("blackjack");
+        recordResult("blackjack");
         onGameEnd?.(Math.floor(bet * 2.5), "blackjack");
       } else {
         setGameResult("loss");
+        recordResult("loss");
         onGameEnd?.(0, "loss");
       }
     }
-  }, [deck, bet, onGameEnd]);
+  }, [deck, bet, onGameEnd, recordResult]);
 
   // Place bet and deal
   const handlePlaceBet = useCallback(() => {
@@ -119,9 +128,10 @@ export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: Black
       setDealerVisible(true);
       setPhase("finished");
       setGameResult("loss");
+      recordResult("loss");
       onGameEnd?.(0, "loss");
     }
-  }, [deck, phase, playerHand, playerStood, playerBusted, onGameEnd]);
+  }, [deck, phase, playerHand, playerStood, playerBusted, onGameEnd, recordResult]);
 
   // Player stands
   const handleStand = useCallback(() => {
@@ -154,11 +164,12 @@ export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: Black
     if (isBusted(newHand)) {
       setPhase("finished");
       setGameResult("loss");
+      recordResult("loss");
       onGameEnd?.(0, "loss");
     } else {
       startDealerTurn();
     }
-  }, [canDoubleDown, deck, playerHand, userCtx, bet, onGameEnd]);
+  }, [canDoubleDown, deck, playerHand, userCtx, bet, onGameEnd, recordResult]);
 
   // Dealer turn
   const startDealerTurn = useCallback(() => {
@@ -181,12 +192,15 @@ export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: Black
                     
                     if (playerVal > dealerVal) {
                       setGameResult("win");
+                      recordResult("win");
                       onGameEnd?.(bet * 2, "win");
                     } else if (playerVal < dealerVal) {
                       setGameResult("loss");
+                      recordResult("loss");
                       onGameEnd?.(0, "loss");
                     } else {
                       setGameResult("push");
+                      recordResult("push");
                       onGameEnd?.(bet, "push");
                     }
                     return dealerH;
@@ -203,6 +217,7 @@ export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: Black
               setTimeout(() => {
                 setPhase("finished");
                 setGameResult("win");
+                recordResult("win");
                 onGameEnd?.(bet * 2, "win");
               }, 500);
               return newDealerHand;
@@ -221,12 +236,15 @@ export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: Black
                 
                 if (playerVal > dealerVal) {
                   setGameResult("win");
+                  recordResult("win");
                   onGameEnd?.(bet * 2, "win");
                 } else if (playerVal < dealerVal) {
                   setGameResult("loss");
+                  recordResult("loss");
                   onGameEnd?.(0, "loss");
                 } else {
                   setGameResult("push");
+                  recordResult("push");
                   onGameEnd?.(bet, "push");
                 }
                 return currentPlayerHand;
@@ -241,35 +259,8 @@ export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: Black
     };
 
     setTimeout(dealerPlay, 500);
-  }, [bet, onGameEnd]);
+  }, [bet, onGameEnd, recordResult]);
 
-  // Evaluate winner
-  const evaluateWinner = useCallback(() => {
-    setPhase("finished");
-
-    const playerVal = getBestHandValue(playerHand);
-    const dealerVal = getBestHandValue(dealerHand);
-
-    if (playerBlackjack) {
-      setGameResult("blackjack");
-      onGameEnd?.(Math.floor(bet * 2.5), "blackjack");
-    } else if (dealerBusted) {
-      setGameResult("win");
-      onGameEnd?.(bet * 2, "win");
-    } else if (playerBusted) {
-      setGameResult("loss");
-      onGameEnd?.(0, "loss");
-    } else if (playerVal > dealerVal) {
-      setGameResult("win");
-      onGameEnd?.(bet * 2, "win");
-    } else if (playerVal < dealerVal) {
-      setGameResult("loss");
-      onGameEnd?.(0, "loss");
-    } else {
-      setGameResult("push");
-      onGameEnd?.(bet, "push");
-    }
-  }, [playerHand, dealerHand, playerBlackjack, dealerBusted, playerBusted, bet, onGameEnd]);
 
   // New game
   const handleNewGame = useCallback(() => {
@@ -303,15 +294,15 @@ export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: Black
       {/* Dealer Section */}
       <div className="flex flex-col items-center gap-3">
         <h2 className="text-2xl font-bold">Dealer</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center justify-center">
           {dealerHand.map((card, idx) => (
-            <div key={idx}>
-              {idx === 1 && !dealerVisible ? (
-                <CardBack size={80} />
-              ) : (
-                <CardView card={card} size={80} />
-              )}
-            </div>
+            <Card
+              key={idx}
+              card={idx === 1 && !dealerVisible ? undefined : convertCard(card)}
+              faceDown={idx === 1 && !dealerVisible}
+              width={80}
+              height={112}
+            />
           ))}
         </div>
         {dealerVisible && (
@@ -328,9 +319,9 @@ export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: Black
       {/* Player Section */}
       <div className="flex flex-col items-center gap-3">
         <h2 className="text-2xl font-bold">{player.name}</h2>
-        <div className="flex gap-2 flex-wrap justify-center">
+        <div className="flex gap-2 flex-wrap justify-center items-center">
           {playerHand.map((card, idx) => (
-            <CardView key={idx} card={card} size={80} />
+            <Card key={idx} card={convertCard(card)} width={80} height={112} />
           ))}
         </div>
         <div className="text-lg">
@@ -346,7 +337,15 @@ export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: Black
       {/* Betting Phase */}
       {phase === "betting" && (
         <div className="flex flex-col items-center gap-4 p-4 bg-zinc-800 rounded-lg">
-          <div className="text-lg">Balance: ${balance.toFixed(2)}</div>
+          <div className="flex flex-col items-center gap-2">
+            <div className="text-lg">Balance: ${balance.toFixed(2)}</div>
+            {/* Stats Tracker */}
+            <div className="flex gap-3 text-sm text-gray-300">
+              <span className="text-green-500">Wins: {stats.wins}</span>
+              <span className="text-red-500">Losses: {stats.losses}</span>
+              <span className="text-yellow-500">Win Rate: {stats.winRate}%</span>
+            </div>
+          </div>
           <div className="flex items-center gap-4">
             <button
               onClick={() => adjustBet(-5)}
@@ -425,4 +424,3 @@ export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: Black
     </div>
   );
 }
-

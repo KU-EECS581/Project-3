@@ -36,7 +36,7 @@ export function PlayableMap({ onMovement, players, mouseRef, hidden, self, onEnt
             className={`map-container ${debug ? 'debug' : ''}`}
             style={{
                 width: `${MAP_WIDTH}px`,
-                height: `${MAP_HEIGHT}px`
+                height: `${MAP_HEIGHT}px`,
             }}
             onClick={onMovement}
         >

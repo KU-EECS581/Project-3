@@ -3,6 +3,7 @@ import type { BJSeat, BJPlayer, TableGameState } from "./types";
 import { UserDataContext } from "@/contexts/UserDataContext";
 import { CardView, CardBack } from "../poker/CardView";
 import { getBestHandValue, isBusted } from "./utils";
+import { useBlackjackStats } from "@/hooks/useBlackjackStats";
 
 interface BlackjackTableProps {
   seats: BJSeat[];
@@ -24,6 +25,7 @@ export function BlackjackTable({
   onJoin
 }: BlackjackTableProps) {
   const userCtx = useContext(UserDataContext);
+  const { stats } = useBlackjackStats('singleplayer');
   const balance = userCtx?.user?.balance ?? 0;
   
   // Find my seat
@@ -249,15 +251,33 @@ export function BlackjackTable({
                           {/* Balance */}
                           {isMe && (
                             <div style={{
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              padding: '4px 8px',
-                              borderRadius: '4px',
-                              background: '#166534',
-                              color: '#bbf7d0',
-                              border: '1px solid #16a34a'
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '4px',
+                              alignItems: 'center'
                             }}>
-                              ${seatBalance.toFixed(2)}
+                              <div style={{
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                background: '#166534',
+                                color: '#bbf7d0',
+                                border: '1px solid #16a34a'
+                              }}>
+                                ${seatBalance.toFixed(2)}
+                              </div>
+                              {/* Stats Tracker */}
+                              <div style={{
+                                fontSize: '10px',
+                                color: '#d1d5db',
+                                display: 'flex',
+                                gap: '8px'
+                              }}>
+                                <span style={{ color: '#22c55e' }}>Wins: {stats.wins}</span>
+                                <span style={{ color: '#ef4444' }}>Losses: {stats.losses}</span>
+                                <span style={{ color: '#fbbf24' }}>WR: {stats.winRate}%</span>
+                              </div>
                             </div>
                           )}
                           

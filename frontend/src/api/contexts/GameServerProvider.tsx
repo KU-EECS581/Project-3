@@ -11,7 +11,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUserData } from "@/hooks/useUserData";
 import { DEFAULT_CHARACTER_X, DEFAULT_CHARACTER_Y, DEFAULT_HOST, DEFAULT_PORT, DEFAULT_USER } from "@/constants";
 import type { PlayerCharacter } from "@/models";
-import { AnyGameMessageSchema, MESSAGE_VERSION, type MovementMessage, MovementMessageSchema, type User, PokerLobbyStateSchema, TableStateSchema } from "~middleware/models";
+import { AnyGameMessageSchema, MESSAGE_VERSION, type MovementMessage, MovementMessageSchema, type User, UserSchema, PokerLobbyStateSchema, TableStateSchema, BlackjackLobbyStateSchema, BlackjackGameStateSchema } from "~middleware/models";
+import { z } from "zod";
 import { GameMessageKey } from "~middleware/enums";
 
 export function GameServerProvider({children}: {children: React.ReactNode}) {
@@ -27,6 +28,8 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
     const [pokerPlayers, setPokerPlayers] = useState<User[]>([]);
     const [pokerInGame, setPokerInGame] = useState(false);
     const [pokerState, setPokerState] = useState<ReturnType<typeof TableStateSchema.parse> | undefined>(undefined);
+    const [blackjackLobbyState, setBlackjackLobbyState] = useState<ReturnType<typeof BlackjackLobbyStateSchema.parse> | undefined>(undefined);
+    const [blackjackGameState, setBlackjackGameState] = useState<ReturnType<typeof BlackjackGameStateSchema.parse> | undefined>(undefined);
     
     // Keep a ref to the latest user without retriggering socket effect
     useEffect(() => {
@@ -107,6 +110,20 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
 
         ws.close();
     }, [ws, readyState]);
+
+    // Disconnect from server when user data is cleared
+    useEffect(() => {
+        if (!profileUser && isConnected) {
+            console.log('[GameServer] User data cleared, disconnecting from server...');
+            // Get the current user from request before disconnecting (for backend identification)
+            const currentUser = request.user;
+            if (currentUser) {
+                console.log(`[GameServer] Disconnecting user: ${currentUser.name}`);
+            }
+            disconnect();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [profileUser, isConnected, disconnect, request.user]);
 
     /**
      * Sends a message through the WebSocket connection.
@@ -228,6 +245,23 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
                         }
                         break;
                     }
+                    case GameMessageKey.DISCONNECT: {
+                        // Remove player from the map when they disconnect
+                        console.log('[Frontend] Received DISCONNECT message:', msg.payload);
+                        const payload = z.object({ user: UserSchema }).safeParse(msg.payload);
+                        if (payload.success) {
+                            const { user } = payload.data;
+                            console.log(`[Frontend] Player ${user.name} disconnected, removing from map`);
+                            setPlayers((prev) => {
+                                const filtered = prev.filter(p => p.user.name !== user.name);
+                                console.log(`[Frontend] Removed ${user.name}, ${prev.length} -> ${filtered.length} players`);
+                                return filtered;
+                            });
+                        } else {
+                            console.error('[Frontend] Failed to parse DISCONNECT payload:', payload.error);
+                        }
+                        break;
+                    }
                     case GameMessageKey.POKER_LOBBY_STATE: {
                         const state = PokerLobbyStateSchema.safeParse(msg.payload);
                         if (state.success) {
@@ -240,6 +274,30 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
                         const gs = TableStateSchema.safeParse(msg.payload);
                         if (gs.success) {
                             setPokerState(gs.data);
+                        }
+                        break;
+                    }
+                    case GameMessageKey.BLACKJACK_LOBBY_STATE: {
+                        console.log('[Frontend] Received BLACKJACK_LOBBY_STATE:', msg.payload);
+                        const state = BlackjackLobbyStateSchema.safeParse(msg.payload);
+                        if (state.success) {
+                            console.log('[Frontend] Parsed lobby state successfully:', state.data);
+                            console.log('[Frontend] Seats with occupants:', state.data.seats.filter(s => s.occupant).length);
+                            setBlackjackLobbyState(state.data);
+                        } else {
+                            console.error('[Frontend] Failed to parse BLACKJACK_LOBBY_STATE:', state.error);
+                        }
+                        break;
+                    }
+                    case GameMessageKey.BLACKJACK_GAME_STATE: {
+                        console.log('[Frontend] Received BLACKJACK_GAME_STATE:', msg.payload);
+                        const gs = BlackjackGameStateSchema.safeParse(msg.payload);
+                        if (gs.success) {
+                            console.log('[Frontend] Parsed game state successfully:', gs.data);
+                            console.log('[Frontend] Players with bets:', gs.data.players.filter(p => p.bet > 0).length);
+                            setBlackjackGameState(gs.data);
+                        } else {
+                            console.error('[Frontend] Failed to parse BLACKJACK_GAME_STATE:', gs.error);
                         }
                         break;
                     }
@@ -360,6 +418,103 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
     const pokerRaise = useCallback((amount: number) => pokerAction('RAISE', amount), [pokerAction]);
     const pokerFold = useCallback(() => pokerAction('FOLD'), [pokerAction]);
 
+    // Blackjack multiplayer helpers
+    const joinBlackjack = useCallback((seatId?: number) => {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !userRef.current) return;
+        const envelope = {
+            key: GameMessageKey.JOIN_BLACKJACK,
+            v: MESSAGE_VERSION,
+            payload: { user: userRef.current, seatId },
+            ts: Date.now(),
+        } as const;
+        ws.send(JSON.stringify(envelope));
+    }, [ws]);
+
+    const leaveBlackjack = useCallback(() => {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !userRef.current) return;
+        const envelope = {
+            key: GameMessageKey.LEAVE_BLACKJACK,
+            v: MESSAGE_VERSION,
+            payload: { user: userRef.current },
+            ts: Date.now(),
+        } as const;
+        ws.send(JSON.stringify(envelope));
+    }, [ws]);
+
+    const blackjackAction = useCallback((action: string, amount?: number, seatId?: number) => {
+        // Use isConnected boolean instead of checking ws.readyState directly
+        // This is more reliable as it uses the tracked readyState state
+        if (!isConnected || !ws) {
+            console.error('[Frontend] Cannot send blackjack action - WebSocket not ready');
+            console.error('[Frontend] isConnected:', isConnected, 'ws:', !!ws, 'readyState:', readyState, 'OPEN =', WebSocket.OPEN);
+            return;
+        }
+        const currentUser = userRef.current;
+        if (!currentUser) {
+            console.error('[Frontend] Cannot send blackjack action - user not set');
+            console.error('[Frontend] userRef.current:', currentUser);
+            console.error('[Frontend] request.user:', request.user);
+            return;
+        }
+        // Ensure user object has required fields
+        if (!currentUser.name) {
+            console.error('[Frontend] Cannot send blackjack action - user.name is missing');
+            console.error('[Frontend] currentUser:', currentUser);
+            return;
+        }
+        // Build user object with required fields for UserSchema
+        const userPayload: any = {
+            name: currentUser.name,
+            balance: currentUser.balance ?? 0,
+        };
+        
+        // Add date fields if they exist, otherwise use current date
+        if (currentUser.dateCreated) {
+            userPayload.dateCreated = currentUser.dateCreated instanceof Date 
+                ? currentUser.dateCreated.toISOString() 
+                : currentUser.dateCreated;
+        } else {
+            userPayload.dateCreated = new Date().toISOString();
+        }
+        
+        if (currentUser.dateUpdated) {
+            userPayload.dateUpdated = currentUser.dateUpdated instanceof Date 
+                ? currentUser.dateUpdated.toISOString() 
+                : currentUser.dateUpdated;
+        } else {
+            userPayload.dateUpdated = new Date().toISOString();
+        }
+        
+        // Build payload, only including defined values
+        const payload: any = {
+            user: userPayload,
+            action,
+        };
+        
+        if (amount !== undefined && amount !== null) {
+            payload.amount = amount;
+        }
+        
+        if (seatId !== undefined && seatId !== null) {
+            payload.seatId = seatId;
+        }
+        
+        const envelope = {
+            key: GameMessageKey.BLACKJACK_ACTION,
+            v: MESSAGE_VERSION,
+            payload,
+            ts: Date.now(),
+        };
+        
+        console.log('[Frontend] Sending blackjack action:', JSON.stringify(envelope, null, 2));
+        // Double-check ws is available before sending
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(envelope));
+        } else {
+            console.error('[Frontend] WebSocket not ready when trying to send blackjack action');
+        }
+    }, [ws, request.user, isConnected, readyState]);
+
     // Implementation of the GameServerProvider
     return (
         <GameServerContext.Provider value={{
@@ -389,6 +544,11 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             pokerBet,
             pokerRaise,
             pokerFold,
+            blackjackLobbyState,
+            blackjackGameState,
+            joinBlackjack,
+            leaveBlackjack,
+            blackjackAction,
         }}>
             {children}
         </GameServerContext.Provider>

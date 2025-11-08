@@ -11,6 +11,9 @@ import { useDeck } from "@/hooks";
 import { useUserData } from "@/hooks";
 import { BlackjackHand, Chip } from "@/components";
 import { getCardValue, isAce, type Card } from "@/models";
+import { BlackjackModeSelection } from "@/components/games/blackjack/BlackjackModeSelection";
+import { BlackjackMultiplayerGame } from "@/components/games/blackjack/BlackjackMultiplayerGame";
+import { useBlackjackStats } from "@/hooks/useBlackjackStats";
 
 const MIN_BET = 10;
 const MAX_BET = 500;
@@ -39,6 +42,8 @@ export function BlackjackGamePage() {
     const navigate = useNavigate();
     const { dealCard, resetDeck, isDeckEmpty } = useDeck();
     const userData = useUserData();
+    const { stats, recordResult } = useBlackjackStats('singleplayer');
+    const [gameMode, setGameMode] = useState<"singleplayer" | "multiplayer" | null>(null);
     const [betAmount, setBetAmount] = useState(MIN_BET);
     const [playerHands, setPlayerHands] = useState<PlayerHand[]>(
         Array(NUM_HAND_POSITIONS).fill(null).map(() => ({
@@ -364,6 +369,9 @@ export function BlackjackGamePage() {
                 };
                 return updated;
             });
+            
+            // Record stats for this hand
+            recordResult(result);
 
             // Show notification for this hand
             const notificationId = `win-${index}-${Date.now()}`;
@@ -381,7 +389,7 @@ export function BlackjackGamePage() {
         });
 
         setActiveHandIndex(null);
-    }, [dealerHand, playerHands, calculateHandValue, isBlackjack, isDeckEmpty, dealCard, userData]);
+    }, [dealerHand, playerHands, calculateHandValue, isBlackjack, isDeckEmpty, dealCard, userData, recordResult]);
 
     const handleStand = useCallback((handIndex: number) => {
         if (activeHandIndex !== handIndex || !playerHands[handIndex].isActive || playerHands[handIndex].isFinished) {
@@ -667,6 +675,17 @@ export function BlackjackGamePage() {
     const dealerValue = calculateHandValue(dealerHand);
     const dealerHasBlackjack = isBlackjack(dealerHand);
 
+    // Show mode selection if not selected
+    if (gameMode === null) {
+        return <BlackjackModeSelection onSelectMode={setGameMode} />;
+    }
+
+    // Show multiplayer game if multiplayer mode selected
+    if (gameMode === "multiplayer") {
+        return <BlackjackMultiplayerGame onBackToMap={handleBackToMap} />;
+    }
+
+    // Singleplayer game (existing code)
     return (
         <div style={{ 
             position: 'fixed',
@@ -725,9 +744,27 @@ export function BlackjackGamePage() {
                 right: '20px',
                 fontSize: '1.2rem',
                 color: 'var(--color-primary)',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                alignItems: 'flex-end'
             }}>
-                Balance: ${userData.user?.balance || 0}
+                <div>
+                    Balance: ${userData.user?.balance || 0}
+                </div>
+                {/* Stats Tracker */}
+                <div style={{
+                    fontSize: '12px',
+                    color: '#d1d5db',
+                    display: 'flex',
+                    gap: '12px',
+                    alignItems: 'flex-end'
+                }}>
+                    <span style={{ color: '#22c55e' }}>Wins: {stats.wins}</span>
+                    <span style={{ color: '#ef4444' }}>Losses: {stats.losses}</span>
+                    <span style={{ color: '#fbbf24' }}>Win Rate: {stats.winRate}%</span>
+                </div>
             </div>
 
             {/* Rules Banner - Center */}
@@ -814,11 +851,11 @@ export function BlackjackGamePage() {
                 <div>MAX ${MAX_BET}</div>
             </div>
 
-            {/* Dealer Hand - top center */}
+            {/* Dealer Hand - top center - moved down to avoid button overlap */}
             {dealerHand.length > 0 && (
                 <div style={{ 
                     position: 'absolute', 
-                    top: '8%', 
+                    top: '12%', 
                     left: '50%', 
                     transform: 'translateX(-50%)', 
                     width: 'calc(100% - 40px)',
