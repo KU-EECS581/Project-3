@@ -1089,8 +1089,11 @@ export class GameServer {
             this.blackjackGameState.players = this.blackjackGameState.players.map(p => ({
                 ...p,
                 hand: undefined,
+                bet: 0,
                 isActive: false,
-                isFinished: false
+                isFinished: false,
+                result: undefined,
+                payout: undefined
             }));
             this.broadcastBlackjackGameState();
             // Always wait for players to click "Deal Cards" again - don't auto-deal

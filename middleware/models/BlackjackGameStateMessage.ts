@@ -22,6 +22,8 @@ export const BlackjackPlayerStateSchema = z.object({
     bet: z.number(),
     isActive: z.boolean(),
     isFinished: z.boolean(),
+    result: z.enum(['win', 'loss', 'push', 'blackjack']).optional(),
+    payout: z.number().optional(),
 });
 
 export const BlackjackGameStateSchema = z.object({

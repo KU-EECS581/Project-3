@@ -25,6 +25,13 @@ function convertCard(card: CardModel): CardComponentType {
     };
 }
 
+const normalizeName = (name?: string | null) => (name ?? '').trim().toLowerCase();
+const isSamePlayer = (a?: string | null, b?: string | null) => normalizeName(a) === normalizeName(b);
+const formatAmount = (value: number) => {
+    const absValue = Math.abs(value);
+    return absValue % 1 === 0 ? absValue.toFixed(0) : absValue.toFixed(2);
+};
+
 const MIN_BET = 10;
 const MAX_BET = 500;
 const NUM_SEATS = 5;
@@ -63,10 +70,13 @@ interface BlackjackMultiplayerGameProps {
     onBackToMap: () => void;
 }
 
+type RoundResult = "win" | "loss" | "push" | "blackjack";
+
 export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGameProps) {
     const userData = useUserData();
     const server = useGameServer();
-    const { stats, recordResult } = useBlackjackStats('multiplayer');
+    const userIdentifier = userData?.user?.name ?? null;
+    const { stats, recordResult } = useBlackjackStats('multiplayer', userIdentifier);
     
     // Safety check - ensure userData and server are available
     if (!userData || !server) {
@@ -105,12 +115,9 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
     const [betAmount, setBetAmount] = useState(MIN_BET);
     const [roundNumber, setRoundNumber] = useState(0);
     const [_showSeatSelection, setShowSeatSelection] = useState(true);
-    const [processedPayouts, setProcessedPayouts] = useState<Set<number>>(new Set()); // Track processed payouts by round number
     // const [prevDealerHand, setPrevDealerHand] = useState<CardModel[]>([]); // Track previous dealer hand for animations - unused (using ref)
     // const [prevPlayerHands, setPrevPlayerHands] = useState<Map<string, CardModel[]>>(new Map()); // Track previous player hands for animations - unused (using ref)
-    const [myGameResult, setMyGameResult] = useState<"win" | "loss" | "push" | "blackjack" | null>(null); // Track current player's game result
-    const [animationsComplete, setAnimationsComplete] = useState<Map<string, boolean>>(new Map()); // Track if animations are complete for each player
-    const animationTimeoutRefs = useRef<Map<string, number>>(new Map()); // Track animation timeouts
+    const [myGameResult, setMyGameResult] = useState<RoundResult | null>(null); // Track current player's game result
     
     // Sequential dealing state - track which cards should be visible for each player/dealer
     const [visibleDealerCards, setVisibleDealerCards] = useState<CardModel[]>([]); // Cards visible for dealer
@@ -123,6 +130,8 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
     const lastProcessedStateRef = useRef<string>(''); // Track last processed state to avoid duplicate processing
     const lastSeatsHashRef = useRef<string>(''); // Track last seats hash to avoid duplicate seat updates
     const lastDealingRoundRef = useRef<number>(-1); // Track last dealing round to detect new rounds
+    const lastProcessedRoundRef = useRef<number | null>(null); // Track the last round where payouts were applied
+    const debitedRoundAmountsRef = useRef<Map<string, number>>(new Map()); // Track amounts already debited per player per round
     const expectingLeaveSeatRef = useRef<boolean>(false); // Track if we're expecting a leave seat response
 
     // Sync seats from server
@@ -156,7 +165,8 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
             
             // When leaving a seat, ensure the seat is completely cleared (no occupant, no isSittingOut flag)
             // This is independent of sit out/sit in status
-            const userSeatIndex = newSeats.findIndex(s => s.occupant?.user.name === userData.user?.name);
+            const normalizedUserName = normalizeName(userData.user?.name);
+            const userSeatIndex = newSeats.findIndex(s => normalizeName(s.occupant?.user.name) === normalizedUserName);
             if (userSeatIndex !== -1 && newSeats[userSeatIndex].occupant) {
                 // User should not be in a seat after leaving - clear it completely
                 console.log('[Frontend] Leave seat: User still in seat after leaving, clearing it');
@@ -176,7 +186,7 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
         setSeats(newSeats);
         
         // Check if user is already seated
-        const userSeat = newSeats.find(s => s.occupant?.user.name === userData.user?.name);
+        const userSeat = newSeats.find(s => normalizeName(s.occupant?.user.name) === normalizeName(userData.user?.name));
         // User seat check
         if (userSeat) {
             setShowSeatSelection(false);
@@ -192,7 +202,8 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
     // Get current player's seat
     const mySeat = useMemo(() => {
         if (!userData.user) return null;
-        return seats.find(s => s.occupant?.user.name === userData.user?.name);
+        const myName = normalizeName(userData.user.name);
+        return seats.find(s => normalizeName(s.occupant?.user.name) === myName) || null;
     }, [seats, userData.user]);
 
     // Sync game state from server
@@ -262,28 +273,19 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
         
         // Merge server state with local optimistic updates (preserve bets that were just placed)
         setPlayers(prev => {
-            const serverPlayersMap = new Map<string, PlayerState>();
-            playersWithResults.forEach(p => {
-                const key = `${p.user.name}-${p.seatId}`;
-                serverPlayersMap.set(key, p);
-            });
-            
-            // Merge: use server state if available, otherwise keep local optimistic updates
+            const toKey = (player: PlayerState) => `${normalizeName(player.user.name)}-${player.seatId}`;
             const merged: PlayerState[] = [];
             const processedKeys = new Set<string>();
             
-            // First, add all server players
             playersWithResults.forEach(p => {
-                const key = `${p.user.name}-${p.seatId}`;
+                const key = toKey(p);
                 merged.push(p);
                 processedKeys.add(key);
             });
             
-            // Then, add any local players with bets that aren't in server state yet (optimistic updates)
             prev.forEach(localPlayer => {
-                const key = `${localPlayer.user.name}-${localPlayer.seatId}`;
+                const key = toKey(localPlayer);
                 if (!processedKeys.has(key) && (localPlayer.bet > 0 || (localPlayer.hand?.bet ?? 0) > 0)) {
-                    // Only keep local player if they have a bet (optimistic update)
                     merged.push(localPlayer);
                     processedKeys.add(key);
                 }
@@ -334,182 +336,125 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
         // Calculate animation completion time for each player when game finishes
         // Animation duration: 800ms + delay (200ms per card index)
         // So for a hand with N cards, last card finishes at: (N-1) * 200 + 800 + 200 (buffer) = N * 200 + 800
-        if (server.blackjackGameState.phase === 'finished') {
-            // Clear previous animation states
-            setAnimationsComplete(new Map());
-            animationTimeoutRefs.current.forEach(timeout => clearTimeout(timeout));
-            animationTimeoutRefs.current.clear();
-            
-            // Calculate animation time for each player
-            // BlackjackHand uses: delay={index * 200}, duration={800}
-            // Last card (index N-1) finishes at: (N-1) * 200 + 800ms
-            // Add buffer: (N-1) * 200 + 800 + 200 = N * 200 + 600ms
-            newPlayers.forEach((player) => {
-                if (player.hand?.cards) {
-                    const playerKey = `${player.user.name}-${player.seatId}`;
-                    const cardCount = player.hand.cards.length;
-                    const animationTime = cardCount * 200 + 600; // (N-1)*200 + 800 + 200 buffer = N*200 + 600
-                    
-                    // Set timeout to mark animations as complete
-                    const timeout = window.setTimeout(() => {
-                        setAnimationsComplete(prev => {
-                            const updated = new Map(prev);
-                            updated.set(playerKey, true);
-                            return updated;
-                        });
-                    }, animationTime);
-                    
-                    animationTimeoutRefs.current.set(playerKey, timeout);
-                }
-            });
-            
-            // For dealer, calculate animation time
-            if (newDealerHand.length > 0) {
-                const dealerAnimationTime = newDealerHand.length * 200 + 600; // Same calculation as players
-                const dealerKey = 'dealer';
-                
-                const timeout = window.setTimeout(() => {
-                    setAnimationsComplete(prev => {
-                        const updated = new Map(prev);
-                        updated.set(dealerKey, true);
-                        return updated;
-                    });
-                }, dealerAnimationTime);
-                
-                animationTimeoutRefs.current.set(dealerKey, timeout);
-            }
-        } else {
-            // Clear animation completion state when not finished
-            setAnimationsComplete(new Map());
-            // Clear all timeouts
-            animationTimeoutRefs.current.forEach(timeout => clearTimeout(timeout));
-            animationTimeoutRefs.current.clear();
-        }
-        
         // Handle payouts when game is finished (only once per round)
         // IMPORTANT: Process payouts BEFORE the state is reset to betting phase
         // Check both server state and local players state for results
-        if (server.blackjackGameState.phase === 'finished' && userData?.user && !processedPayouts.has(server.blackjackGameState.roundNumber)) {
-            console.log(`[Frontend] Processing finished game for ${userData.user.name}, round: ${server.blackjackGameState.roundNumber}`);
-            console.log(`[Frontend] My seat ID: ${mySeat?.id}, User name: ${userData.user.name}`);
-            
-            // Find player by name and seat ID (more reliable than just name)
-            // Check playersWithResults first (has results mapped), then server state, then local state
-            const myPlayer = playersWithResults.find(
-                p => p.user.name === userData.user?.name && p.seatId === mySeat?.id
-            ) || playersWithResults.find(
-                p => p.user.name === userData.user?.name
-            ) || server.blackjackGameState.players.find(
-                p => p.user.name === userData.user?.name && p.seatId === mySeat?.id
-            ) || server.blackjackGameState.players.find(
-                p => p.user.name === userData.user?.name
-            ) || players.find(
-                p => p.user.name === userData.user?.name && p.seatId === mySeat?.id
-            ) || players.find(
-                p => p.user.name === userData.user?.name
-            );
-            
-            const result = (myPlayer as any)?.result;
-            const payout = (myPlayer as any)?.payout ?? 0;
-            
-            console.log(`[Frontend] Player lookup result:`, {
-                found: !!myPlayer,
-                result: result,
-                payout: payout,
-                bet: myPlayer?.bet,
-                seatId: myPlayer?.seatId,
-                playerName: myPlayer?.user?.name,
-                playersWithResultsCount: playersWithResults.length,
-                serverPlayersCount: server.blackjackGameState.players.length,
-                localPlayersCount: players.length
-            });
-            
-            if (myPlayer && result) {
-                console.log(`[Frontend] Processing payout for ${userData.user.name}: ${result}, payout: ${payout}, bet: ${myPlayer.bet || myPlayer.hand?.bet || 0}, round: ${server.blackjackGameState.roundNumber}`);
+        const currentRoundNumber = server.blackjackGameState.roundNumber ?? 0;
+        const normalizedUserName = normalizeName(userData.user?.name);
+        const alreadyProcessedThisRound = lastProcessedRoundRef.current === currentRoundNumber;
+
+        if (server.blackjackGameState.phase === 'finished' && userData?.user) {
+            if (!alreadyProcessedThisRound || myGameResult === null) {
+                console.log(`[Frontend] Processing finished game for ${userData.user.name}, round: ${currentRoundNumber}`);
+                console.log(`[Frontend] My seat ID: ${mySeat?.id}, User name: ${userData.user.name}`);
                 
-                // Update balance based on payout
-                // Backend payout: blackjack = bet * 2.5, win = bet * 2, push = bet, loss = 0
-                // This is the total amount to add (includes bet back + winnings)
-                // Note: The bet was already subtracted when placed, so we just add the payout
-                if (userData.addFunds) {
-                    if (payout > 0) {
-                        userData.addFunds(payout);
-                        console.log(`[Frontend] Added ${payout} to balance for ${userData.user.name} (${result})`);
-                    } else {
-                        // Loss: payout is 0, bet was already subtracted when placed
-                        console.log(`[Frontend] Loss for ${userData.user.name} - bet of ${myPlayer.bet || myPlayer.hand?.bet || 0} was already subtracted`);
-                    }
-                } else {
-                    console.error(`[Frontend] addFunds not available for ${userData.user.name}`);
-                }
+                const myPlayer = playersWithResults.find(
+                    p => normalizeName(p.user.name) === normalizedUserName && p.seatId === mySeat?.id
+                ) || playersWithResults.find(
+                    p => normalizeName(p.user.name) === normalizedUserName
+                ) || server.blackjackGameState.players.find(
+                    p => normalizeName(p.user.name) === normalizedUserName && p.seatId === mySeat?.id
+                ) || server.blackjackGameState.players.find(
+                    p => normalizeName(p.user.name) === normalizedUserName
+                ) || players.find(
+                    p => normalizeName(p.user.name) === normalizedUserName && p.seatId === mySeat?.id
+                ) || players.find(
+                    p => normalizeName(p.user.name) === normalizedUserName
+                );
                 
-                // Mark this round as processed
-                setProcessedPayouts(prev => new Set([...prev, server.blackjackGameState!.roundNumber]));
+                const result = (myPlayer as any)?.result;
+                const payout = (myPlayer as any)?.payout ?? 0;
                 
-                // Set game result for display
-                setMyGameResult(result as "win" | "loss" | "push" | "blackjack");
-                
-                // Record stats - always record, even for push (which doesn't count as win/loss)
-                // Call recordResult directly - it uses setState which will trigger a re-render
-                recordResult(result as "win" | "loss" | "push" | "blackjack");
-                console.log(`[Frontend] Recorded ${result} for ${userData.user?.name || 'unknown'}`);
-            } else {
-                console.log(`[Frontend] No player found or no result for ${userData.user?.name || 'unknown'}`, {
-                    myPlayer: !!myPlayer,
-                    hasResult: myPlayer ? !!(myPlayer as any).result : false,
-                    mySeatId: mySeat?.id,
-                    playersWithResults: playersWithResults.map(p => ({ 
-                        name: p.user.name, 
-                        seatId: p.seatId, 
-                        result: (p as any).result,
-                        payout: (p as any).payout,
-                        bet: p.bet
-                    })),
-                    serverPlayers: server.blackjackGameState.players.map(p => ({ 
-                        name: p.user.name, 
-                        seatId: p.seatId, 
-                        result: (p as any).result,
-                        payout: (p as any).payout,
-                        bet: p.bet
-                    })),
-                    localPlayers: players.map(p => ({ 
-                        name: p.user.name, 
-                        seatId: p.seatId, 
-                        result: (p as any).result,
-                        payout: (p as any).payout,
-                        bet: p.bet
-                    }))
+                console.log(`[Frontend] Player lookup result:`, {
+                    found: !!myPlayer,
+                    result: result,
+                    payout: payout,
+                    bet: myPlayer?.bet,
+                    seatId: myPlayer?.seatId,
+                    playerName: myPlayer?.user?.name,
+                    playersWithResultsCount: playersWithResults.length,
+                    serverPlayersCount: server.blackjackGameState.players.length,
+                    localPlayersCount: players.length,
+                    alreadyProcessedThisRound
                 });
+                
+                if (myPlayer && result) {
+                    console.log(`[Frontend] Processing payout for ${userData.user.name}: ${result}, payout: ${payout}, bet: ${myPlayer.bet || (myPlayer as any)?.hand?.bet || 0}, round: ${currentRoundNumber}`);
+                    
+                    if (userData.addFunds) {
+                        if (payout > 0) {
+                            userData.addFunds(payout);
+                            console.log(`[Frontend] Added ${payout} to balance for ${userData.user.name} (${result})`);
+                        } else {
+                            console.log(`[Frontend] Loss for ${userData.user.name} - bet of ${myPlayer.bet || (myPlayer as any)?.hand?.bet || 0} was already subtracted`);
+                        }
+                    } else {
+                        console.error(`[Frontend] addFunds not available for ${userData.user.name}`);
+                    }
+                    
+                    lastProcessedRoundRef.current = currentRoundNumber;
+                    setMyGameResult(result as RoundResult);
+                    recordResult(result as RoundResult);
+                    console.log(`[Frontend] Recorded ${result} for ${userData.user?.name || 'unknown'}`);
+                    debitedRoundAmountsRef.current.delete(`${normalizedUserName}-${currentRoundNumber}`);
+                } else {
+                    console.log(`[Frontend] No player found or no result for ${userData.user?.name || 'unknown'}`, {
+                        myPlayer: !!myPlayer,
+                        hasResult: myPlayer ? !!(myPlayer as any).result : false,
+                        mySeatId: mySeat?.id,
+                        playersWithResults: playersWithResults.map(p => ({ 
+                            name: p.user.name, 
+                            seatId: p.seatId, 
+                            result: (p as any).result,
+                            payout: (p as any).payout,
+                            bet: p.bet
+                        })),
+                        serverPlayers: server.blackjackGameState.players.map(p => ({ 
+                            name: p.user.name, 
+                            seatId: p.seatId, 
+                            result: (p as any).result,
+                            payout: (p as any).payout,
+                            bet: p.bet
+                        })),
+                        localPlayers: players.map(p => ({ 
+                            name: p.user.name, 
+                            seatId: p.seatId, 
+                            result: (p as any).result,
+                            payout: (p as any).payout,
+                            bet: p.bet
+                        }))
+                    });
+                }
             }
         }
         
-        // Clear game result when starting a new round
-        if (server.blackjackGameState.phase === 'betting' && myGameResult !== null) {
-            setMyGameResult(null);
-        }
-        
-        // Clear processed payouts when starting a new round
-        if (server.blackjackGameState.phase === 'betting' && processedPayouts.has(server.blackjackGameState.roundNumber - 1)) {
-            setProcessedPayouts(new Set());
-        }
-        
-        // Clear player hands when game resets to betting phase - but keep bets
-        if (server.blackjackGameState.phase === 'betting' && processedPayouts.has(server.blackjackGameState.roundNumber - 1)) {
-            setPlayers(prev => prev.map(p => ({ 
-                ...p, 
-                hand: undefined,
-                isActive: false,
-                isFinished: false,
-                result: undefined,
-                payout: undefined
-            })));
-            setDealerHand([]);
-            setDealerVisible(false);
-            setVisibleDealerCards([]);
-            setVisiblePlayerCards(new Map());
-            dealingTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
-            dealingTimeoutsRef.current.clear();
-            setMyGameResult(null);
+        if ((server.blackjackGameState.phase === 'betting' || server.blackjackGameState.phase === 'waiting')) {
+            if (myGameResult !== null) {
+                setMyGameResult(null);
+            }
+            if (server.blackjackGameState.phase === 'betting') {
+                lastProcessedRoundRef.current = null;
+                debitedRoundAmountsRef.current.clear();
+            }
+            
+            const playersHaveHands = players.some(p => p.hand);
+            if (playersHaveHands || dealerHand.length > 0 || visibleDealerCards.length > 0 || visiblePlayerCards.size > 0) {
+                setPlayers(prev => prev.map(p => ({
+                    ...p,
+                    hand: undefined,
+                    isActive: false,
+                    isFinished: false,
+                    result: undefined,
+                    payout: undefined,
+                    bet: 0
+                })));
+                setDealerHand([]);
+                setDealerVisible(false);
+                setVisibleDealerCards([]);
+                setVisiblePlayerCards(new Map());
+                dealingTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+                dealingTimeoutsRef.current.clear();
+            }
         }
         
         // Sequential dealing logic - match singleplayer timing exactly
@@ -520,6 +465,7 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
         if (isDealingPhase && isNewRound && newDealerHand.length > 0) {
             // New round starting - clear previous dealing state
             lastDealingRoundRef.current = currentRound;
+            debitedRoundAmountsRef.current.clear();
             setVisibleDealerCards([]);
             setVisiblePlayerCards(new Map());
             // Clear all dealing timeouts
@@ -530,6 +476,21 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
             const playersWithBets = newPlayers
                 .filter(p => (p.bet || 0) > 0)
                 .sort((a, b) => a.seatId - b.seatId);
+            
+            // Debit balances for locked-in bets (only once per round per player)
+            playersWithBets.forEach(player => {
+                const bet = player.bet || 0;
+                if (bet > 0 && userData.user && isSamePlayer(player.user.name, userData.user.name)) {
+                    const key = `${normalizeName(player.user.name)}-${currentRound}`;
+                    if (!debitedRoundAmountsRef.current.has(key)) {
+                        if (userData.removeFunds) {
+                            userData.removeFunds(bet);
+                            debitedRoundAmountsRef.current.set(key, bet);
+                            console.log(`[Frontend] Debited ${bet} from ${player.user.name} for round ${currentRound}`);
+                        }
+                    }
+                }
+            });
             
             // Deal dealer's first card immediately
             if (newDealerHand.length >= 1) {
@@ -604,11 +565,12 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
             });
             setVisiblePlayerCards(allPlayerCards);
         }
-    }, [server?.blackjackGameState, mySeat, userData?.user, userData?.addFunds, processedPayouts, players, recordResult]);
+    }, [server?.blackjackGameState, mySeat, userData?.user, userData?.addFunds, players, recordResult, visibleDealerCards, visiblePlayerCards, dealerHand, myGameResult]);
 
     const myPlayerState = useMemo(() => {
         if (!userData.user) return null;
-        return players.find(p => p.user.name === userData.user?.name);
+        const normalizedUserName = normalizeName(userData.user?.name);
+        return players.find(p => normalizeName(p.user.name) === normalizedUserName) || null;
     }, [players, userData.user]);
 
     // Memoize converted cards for each player to ensure stable references for BlackjackHand
@@ -639,6 +601,16 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
     const myHand = useMemo(() => {
         return myPlayerState?.hand;
     }, [myPlayerState]);
+
+    const checkSeatHasBet = useCallback((seat: Seat): boolean => {
+        if (!seat.occupant || seat.occupant.isSittingOut) return false;
+        const occupantName = seat.occupant.user.name;
+        const localPlayer = players.find(p => isSamePlayer(p.user.name, occupantName) && p.seatId === seat.id);
+        const serverPlayer = server?.blackjackGameState?.players?.find(p => isSamePlayer(p.user.name, occupantName) && p.seatId === seat.id);
+        const hasLocalBet = localPlayer && (localPlayer.bet > 0 || (localPlayer.hand?.bet ?? 0) > 0);
+        const hasServerBet = serverPlayer && (serverPlayer.bet > 0 || (serverPlayer.hand?.bet ?? 0) > 0);
+        return Boolean(hasLocalBet || hasServerBet);
+    }, [players, server?.blackjackGameState?.players]);
 
     // Join blackjack lobby on mount and reset state
     useEffect(() => {
@@ -674,7 +646,8 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
         }
         
         // Check if user already has a seat
-        const existingSeat = seats.find(s => s.occupant?.user.name === userData.user?.name);
+        const normalizedUserName = normalizeName(userData.user?.name);
+        const existingSeat = seats.find(s => normalizeName(s.occupant?.user.name) === normalizedUserName);
         if (existingSeat) {
             alert('You already have a seat! Leave your current seat first.');
             return;
@@ -787,9 +760,31 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
             console.log('Cannot double down - must have exactly 2 cards');
             return;
         }
+        const normalizedUserName = normalizeName(userData.user?.name);
+        const myPlayerState = players.find(p => normalizeName(p.user.name) === normalizedUserName && p.seatId === mySeat.id);
+        const currentBet = myPlayerState?.bet || myPlayerState?.hand?.bet || myHand?.bet || 0;
+        const availableBalance = userData.user?.balance || 0;
+        if (currentBet === 0) {
+            console.log('Cannot double down - no existing bet');
+            return;
+        }
+        if ((currentBet * 2) > availableBalance) {
+            alert('Insufficient funds to double down!');
+            return;
+        }
         console.log(`[Frontend] ${userData.user.name} doubling down at seat ${mySeat.id}`);
-        server.blackjackAction('DOUBLE_DOWN', undefined, mySeat.id);
-    }, [userData.user, gamePhase, currentPlayerId, server, mySeat, myHand]);
+        if (userData.removeFunds) {
+            userData.removeFunds(currentBet);
+        }
+        try {
+            server.blackjackAction('DOUBLE_DOWN', undefined, mySeat.id);
+        } catch (error) {
+            console.error('Error sending DOUBLE_DOWN action:', error);
+            if (userData.addFunds) {
+                userData.addFunds(currentBet);
+            }
+        }
+    }, [userData.user, gamePhase, currentPlayerId, server, mySeat, myHand, players]);
 
 
     const handlePlaceBet = useCallback(() => {
@@ -803,13 +798,9 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
             alert('You are sitting out! Click "Sit In" to place bets.');
             return;
         }
-        if (betAmount > (userData.user.balance || 0)) {
-            alert('Insufficient funds!');
-            return;
-        }
-        
+        const normalizedUserName = normalizeName(userData.user.name);
         // Get current bet (like singleplayer - allows adding chips incrementally)
-        const existingPlayerState = players.find(p => p.user.name === userData.user?.name && p.seatId === mySeat.id);
+        const existingPlayerState = players.find(p => normalizeName(p.user.name) === normalizedUserName && p.seatId === mySeat.id);
         const currentBet = existingPlayerState?.bet || existingPlayerState?.hand?.bet || 0;
         const newTotalBet = currentBet + betAmount;
         
@@ -819,16 +810,23 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
             return;
         }
         
+        const availableBalance = userData.user?.balance || 0;
+        if (betAmount > availableBalance) {
+            alert('Insufficient funds!');
+            return;
+        }
+        
         console.log('Placing bet:', betAmount, 'Total:', newTotalBet, 'for user:', userData.user.name);
         
         // Optimistically update local state - prevent duplicates and add to existing bet
         setPlayers(prev => {
             const updated = [...prev];
             // Remove any existing duplicates first
-            const filtered = updated.filter((p, index, self) => 
-                index === self.findIndex(pl => pl.user.name === p.user.name && pl.seatId === p.seatId)
-            );
-            const playerIndex = filtered.findIndex(p => p.user.name === userData.user?.name && p.seatId === mySeat.id);
+            const filtered = updated.filter((candidate, index, self) => {
+                const candidateKey = `${normalizeName(candidate.user.name)}-${candidate.seatId}`;
+                return index === self.findIndex(pl => `${normalizeName(pl.user.name)}-${pl.seatId}` === candidateKey);
+            });
+            const playerIndex = filtered.findIndex(p => normalizeName(p.user.name) === normalizedUserName && p.seatId === mySeat.id);
             if (playerIndex !== -1) {
                 // Update existing player state - add to existing bet
                 filtered[playerIndex] = {
@@ -865,7 +863,8 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
             // Revert optimistic update on error
             setPlayers(prev => {
                 const updated = [...prev];
-                const playerIndex = updated.findIndex(p => p.user.name === userData.user?.name && p.seatId === mySeat.id);
+                const normalizedName = normalizeName(userData.user?.name);
+                const playerIndex = updated.findIndex(p => normalizeName(p.user.name) === normalizedName && p.seatId === mySeat.id);
                 if (playerIndex !== -1) {
                     updated[playerIndex] = {
                         ...updated[playerIndex],
@@ -898,8 +897,10 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
             setTurnTimer(remaining);
             
             // Auto-action when timer hits 0
-            if (remaining <= 0 && currentPlayerId === userData.user?.name && mySeat) {
-                const currentPlayer = players.find(p => p.user.name === currentPlayerId);
+            const normalizedCurrentPlayerId = normalizeName(currentPlayerId);
+            const normalizedUserName = normalizeName(userData.user?.name);
+            if (remaining <= 0 && normalizedCurrentPlayerId === normalizedUserName && mySeat) {
+                const currentPlayer = players.find(p => normalizeName(p.user.name) === normalizedCurrentPlayerId);
                 if (currentPlayer?.hand && !currentPlayer.hand.isStanding && !currentPlayer.hand.isBusted) {
                     const value = currentPlayer.hand.value;
                     console.log(`[Frontend] Timer expired for ${currentPlayerId}, hand value: ${value}`);
@@ -1043,7 +1044,8 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                         </button>
                         {(() => {
                             // Check if player has a bet for confirmation message
-                            const playerState = players.find(p => p.user.name === userData.user?.name && p.seatId === mySeat.id);
+                            const normalizedUserName = normalizeName(userData.user?.name);
+                            const playerState = players.find(p => normalizeName(p.user.name) === normalizedUserName && p.seatId === mySeat.id);
                             const currentBet = playerState?.bet || playerState?.hand?.bet || 0;
                             const hasBet = currentBet > 0;
                             const confirmMessage = hasBet 
@@ -1090,7 +1092,8 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                                                 return updated;
                                             });
                                             // Remove player from local players state
-                                            setPlayers(prev => prev.filter(p => !(p.user.name === userData.user?.name && p.seatId === mySeat.id)));
+                                            const normalizedUserName = normalizeName(userData.user?.name);
+                                            setPlayers(prev => prev.filter(p => !(normalizeName(p.user.name) === normalizedUserName && p.seatId === mySeat.id)));
                                             setShowSeatSelection(true);
                                             setSelectedSeat(null);
                                             
@@ -1257,47 +1260,10 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                 </div>
             )}
 
-            {/* Game Result Message - matching singleplayer style - Only show after animations complete */}
-            {gamePhase === "finished" && myGameResult && mySeat && (() => {
-                const myPlayerKey = `${userData.user?.name}-${mySeat.id}`;
-                return animationsComplete.get(myPlayerKey) ?? false;
-            })() && (
-                <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '16px',
-                    zIndex: 100,
-                    pointerEvents: 'none'
-                }}>
-                    <div style={{
-                        fontSize: '32px',
-                        fontWeight: 'bold',
-                        color: myGameResult === "win" || myGameResult === "blackjack" ? "#22c55e" :
-                               myGameResult === "loss" ? "#ef4444" : "#eab308",
-                        textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
-                        padding: '16px 32px',
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        borderRadius: '12px',
-                        border: `3px solid ${myGameResult === "win" || myGameResult === "blackjack" ? "#22c55e" :
-                                 myGameResult === "loss" ? "#ef4444" : "#eab308"}`
-                    }}>
-                        {myGameResult === "win" && "You Win!"}
-                        {myGameResult === "loss" && "You Lose!"}
-                        {myGameResult === "push" && "Push!"}
-                        {myGameResult === "blackjack" && "Blackjack!"}
-                    </div>
-                </div>
-            )}
-
             {/* Player Hand Cards - Show cards during active game phases and finished phase (keep cards visible until new round) */}
             {gamePhase !== "betting" && gamePhase !== "waiting" && players.filter((player, index, self) => 
                 // Filter out duplicates - only show first occurrence of each player-seat combination
-                index === self.findIndex(p => p.user.name === player.user.name && p.seatId === player.seatId) &&
+                index === self.findIndex(p => isSamePlayer(p.user.name, player.user.name) && p.seatId === player.seatId) &&
                 // Only show if player has a hand (active in game)
                 player.hand && player.hand.cards.length > 0
             ).map((player) => {
@@ -1305,7 +1271,7 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                 if (!seat || !seat.occupant) return null;
                 
                 // const isMe = player.user.name === userData.user?.name; // unused
-                const isCurrentTurn = currentPlayerId === player.user.name;
+                const isCurrentTurn = isSamePlayer(currentPlayerId, player.user.name);
                 const cardPos = getCardPosition(player.seatId);
                 
                 return (
@@ -1352,10 +1318,7 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
             {/* Win/Lose Announcements for Each Player - Show when game is finished - Matching singleplayer style exactly */}
             {gamePhase === "finished" && (() => {
                 const playersWithResults = players.filter((player, index, self) => 
-                    
-                    // Filter out duplicates - only show first occurrence of each player-seat combination
-                    index === self.findIndex(p => p.user.name === player.user.name && p.seatId === player.seatId) &&
-                    // Only show if player has a result and a hand
+                    index === self.findIndex(p => isSamePlayer(p.user.name, player.user.name) && p.seatId === player.seatId) &&
                     player.result && player.hand && player.hand.cards && player.hand.cards.length > 0
                 );
                 
@@ -1364,54 +1327,40 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                 if (!seat || !seat.occupant) return null;
                 
                 const cardPos = getCardPosition(player.seatId);
-                const isMe = player.user.name === userData.user?.name;
                 
-                // Calculate win amount from payout - matching singleplayer logic
                 const bet = player.bet || player.hand?.bet || 0;
-                // In singleplayer: blackjack shows total payout (bet * 2.5), wins show bet amount (winnings)
-                // Backend payout: blackjack = bet * 2.5, win = bet * 2, push = bet, loss = 0
-                let winAmount = 0;
-                if (player.result === "blackjack") {
-                    winAmount = player.payout || 0; // Total payout for blackjack
-                } else if (player.result === "win") {
-                    winAmount = bet; // Winnings amount (bet * 2 - bet = bet)
-                } else if (player.result === "push") {
-                    winAmount = 0; // No winnings, bet returned
-                } else if (player.result === "loss") {
-                    winAmount = -bet; // Loss amount
-                }
-                
-                // Determine announcement text and colors based on result - matching singleplayer messages
+                const payout = (player as any)?.payout ?? 0;
+                const netAmount = payout - bet;
                 let message = '';
                 let isWin = false;
                 let isPush = false;
                 let isBlackjack = false;
+                const isMe = isSamePlayer(player.user.name, userData.user?.name);
                 
                 if (player.hand?.isBusted) {
-                    // Player busted
-                    message = isMe ? `Bust! Lost $${bet}` : `${player.user.name} - Bust! Lost $${bet}`;
+                    message = isMe ? `Bust! Lost $${formatAmount(bet)}` : `${player.user.name} - Bust! Lost $${formatAmount(bet)}`;
                 } else if (player.result === "blackjack") {
-                    // Blackjack
                     isBlackjack = true;
-                    message = isMe ? `Blackjack! Won $${winAmount}` : `${player.user.name} - Blackjack! Won $${winAmount}`;
-                } else if (dealerBusted) {
-                    // Dealer busted
+                    const amountText = formatAmount(Math.max(netAmount, 0));
+                    message = isMe ? `Blackjack! Won $${amountText}` : `${player.user.name} - Blackjack! Won $${amountText}`;
+                } else if (dealerBusted && player.result === "win") {
                     isWin = true;
-                    message = isMe ? `Dealer Bust! Won $${winAmount}` : `${player.user.name} - Dealer Bust! Won $${winAmount}`;
+                    const amountText = formatAmount(Math.max(netAmount, 0));
+                    message = isMe ? `Dealer Bust! Won $${amountText}` : `${player.user.name} - Dealer Bust! Won $${amountText}`;
                 } else if (player.result === "win") {
-                    // Regular win
                     isWin = true;
-                    message = isMe ? `You Win! +$${winAmount}` : `${player.user.name} Wins! +$${winAmount}`;
+                    const amountText = formatAmount(Math.max(netAmount, 0));
+                    message = isMe ? `You Win! +$${amountText}` : `${player.user.name} Wins! +$${amountText}`;
                 } else if (player.result === "push") {
-                    // Push
                     isPush = true;
                     message = isMe ? `Push - Bet Returned` : `${player.user.name} - Push - Bet Returned`;
                 } else if (player.result === "loss") {
-                    // Regular loss
-                    message = isMe ? `You Lose -$${Math.abs(winAmount)}` : `${player.user.name} Loses -$${Math.abs(winAmount)}`;
+                    const lossAmount = formatAmount(Math.abs(netAmount) || bet);
+                    message = isMe ? `You Lose -$${lossAmount}` : `${player.user.name} Loses -$${lossAmount}`;
+                } else {
+                    message = isMe ? 'Round Complete' : `${player.user.name} - Round Complete`;
                 }
                 
-                // Styling matching singleplayer exactly
                 const backgroundColor = isBlackjack 
                     ? 'rgba(255, 215, 0, 0.95)' 
                     : isWin 
@@ -1427,6 +1376,12 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                     : isPush 
                     ? '#fbbf24' 
                     : '#ef4444';
+                
+                const amountDisplay = netAmount === 0
+                    ? '$0'
+                    : netAmount > 0
+                        ? `+$${formatAmount(netAmount)}`
+                        : `-$${formatAmount(Math.abs(netAmount))}`;
                 
                 return (
                     <div
@@ -1459,10 +1414,7 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                             fontWeight: '900',
                             opacity: 1
                         }}>
-                            {isWin && winAmount > 0 && `+$${winAmount}`}
-                            {isBlackjack && winAmount > 0 && `+$${winAmount}`}
-                            {!isWin && !isPush && !isBlackjack && player.result === "loss" && `-$${Math.abs(winAmount)}`}
-                            {isPush && '$0'}
+                            {amountDisplay}
                         </div>
                     </div>
                 );
@@ -1484,7 +1436,9 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                     const betPos = getBetPosition(idx);
                     const occupant = ('occupant' in seat && seat.occupant) ? seat.occupant : undefined;
                     const hasUser = occupant && typeof occupant === 'object' && 'user' in occupant && occupant.user && typeof occupant.user === 'object' && 'name' in occupant.user;
-                    const isMe = hasUser && (occupant.user as { name: string }).name === userData.user?.name;
+                    const occupantName = hasUser ? (occupant.user as { name: string }).name : undefined;
+                    const isMe = hasUser && isSamePlayer(occupantName, userData.user?.name);
+                    const playerStateForSeat = hasUser ? players.find(p => isSamePlayer(p.user.name, occupantName) && p.seatId === seat.id) : undefined;
                     const playerCharacter: PlayerCharacter | null = hasUser ? {
                         user: occupant.user as any, // Type assertion needed due to User type mismatch
                         x: betPos.x,
@@ -1506,9 +1460,7 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                                     }
                                     // Allow clicking to place bet if it's the current player's seat - can add chips incrementally
                                     // This works for any seat the player is in, not just the last one
-                                    const hasUser = occupant && typeof occupant === 'object' && 'user' in occupant && occupant.user && typeof occupant.user === 'object' && 'name' in occupant.user;
-                                    const playerState = hasUser ? players.find(p => p.user.name === (occupant.user as { name: string }).name && p.seatId === seat.id) : undefined;
-                                    const currentBet = playerState?.bet || playerState?.hand?.bet || 0;
+                                    const currentBet = playerStateForSeat?.bet || playerStateForSeat?.hand?.bet || 0;
                                     // Check if adding more would exceed max bet
                                     if (currentBet + betAmount > MAX_BET) {
                                         alert(`Maximum bet is $${MAX_BET}!`);
@@ -1551,9 +1503,7 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                                     e.currentTarget.style.borderColor = '#fff';
                                     e.currentTarget.style.transform = 'scale(1.05)';
                                 } else if (isMe && (gamePhase === "betting" || gamePhase === "waiting")) {
-                                    const hasUser = occupant && typeof occupant === 'object' && 'user' in occupant && occupant.user && typeof occupant.user === 'object' && 'name' in occupant.user;
-                                    const playerState = hasUser ? players.find(p => p.user.name === (occupant.user as { name: string }).name && p.seatId === seat.id) : undefined;
-                                    const hasBet = (playerState?.bet ?? 0) > 0 || (playerState?.hand?.bet ?? 0) > 0;
+                                    const hasBet = (playerStateForSeat?.bet ?? 0) > 0 || (playerStateForSeat?.hand?.bet ?? 0) > 0;
                                     if (!hasBet) {
                                         e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
                                         e.currentTarget.style.borderColor = '#fff';
@@ -1567,9 +1517,7 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                                     e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
                                     e.currentTarget.style.transform = 'scale(1)';
                                 } else if (isMe && (gamePhase === "betting" || gamePhase === "waiting")) {
-                                    const hasUser = occupant && typeof occupant === 'object' && 'user' in occupant && occupant.user && typeof occupant.user === 'object' && 'name' in occupant.user;
-                                    const playerState = hasUser ? players.find(p => p.user.name === (occupant.user as { name: string }).name && p.seatId === seat.id) : undefined;
-                                    const hasBet = (playerState?.bet ?? 0) > 0 || (playerState?.hand?.bet ?? 0) > 0;
+                                    const hasBet = (playerStateForSeat?.bet ?? 0) > 0 || (playerStateForSeat?.hand?.bet ?? 0) > 0;
                                     if (!hasBet) {
                                         e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
                                         e.currentTarget.style.borderColor = '#3b82f6';
@@ -1628,10 +1576,8 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                                     {/* Betting bubble content - ALWAYS show chips if bet placed, consistent across all phases */}
                                     {(() => {
                                         // Use seat ID to find the correct player state for this specific seat
-                                        const hasUser = occupant && typeof occupant === 'object' && 'user' in occupant && occupant.user && typeof occupant.user === 'object' && 'name' in occupant.user;
-                                    const playerState = hasUser ? players.find(p => p.user.name === (occupant.user as { name: string }).name && p.seatId === seat.id) : undefined;
                                         // Always use the bet value - hand.bet during game, bet during betting
-                                        const currentBet = playerState?.hand?.bet || playerState?.bet || 0;
+                                        const currentBet = playerStateForSeat?.hand?.bet || playerStateForSeat?.bet || 0;
                                         const hasBet = currentBet > 0;
                                         
                                         if (isMe && gamePhase === "betting") {
@@ -1908,15 +1854,7 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                             const serverHasBets = server?.blackjackGameState?.players?.some(p => (p.bet ?? 0) > 0 || (p.hand?.bet ?? 0) > 0) || false;
                             
                             // Also check seats for any bets (in case state hasn't synced yet)
-                            const seatsHaveBets = seats.some(seat => {
-                                if (!seat.occupant || seat.occupant.isSittingOut) return false;
-                                // Check both local and server state for bets
-                                const localPlayer = players.find(p => p.user.name === seat.occupant?.user.name && p.seatId === seat.id);
-                                const serverPlayer = server?.blackjackGameState?.players?.find(p => p.user.name === seat.occupant?.user.name && p.seatId === seat.id);
-                                const hasLocalBet = localPlayer && (localPlayer.bet > 0 || (localPlayer.hand?.bet ?? 0) > 0);
-                                const hasServerBet = serverPlayer && (serverPlayer.bet > 0 || (serverPlayer.hand?.bet ?? 0) > 0);
-                                return hasLocalBet || hasServerBet;
-                            });
+                            const seatsHaveBets = seats.some(checkSeatHasBet);
                             
                             const hasBets = localHasBets || serverHasBets || seatsHaveBets;
                             
@@ -1962,15 +1900,7 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                         disabled={(() => {
                             const localHasBets = players.some(p => (p.bet ?? 0) > 0 || (p.hand?.bet ?? 0) > 0);
                             const serverHasBets = server?.blackjackGameState?.players?.some(p => (p.bet ?? 0) > 0 || (p.hand?.bet ?? 0) > 0) || false;
-                            const seatsHaveBets = seats.some(seat => {
-                                if (!seat.occupant || seat.occupant.isSittingOut) return false;
-                                // Check both local and server state for bets
-                                const localPlayer = players.find(p => p.user.name === seat.occupant?.user.name && p.seatId === seat.id);
-                                const serverPlayer = server?.blackjackGameState?.players?.find(p => p.user.name === seat.occupant?.user.name && p.seatId === seat.id);
-                                const hasLocalBet = localPlayer && (localPlayer.bet > 0 || (localPlayer.hand?.bet ?? 0) > 0);
-                                const hasServerBet = serverPlayer && (serverPlayer.bet > 0 || (serverPlayer.hand?.bet ?? 0) > 0);
-                                return hasLocalBet || hasServerBet;
-                            });
+                            const seatsHaveBets = seats.some(checkSeatHasBet);
                             return !(localHasBets || serverHasBets || seatsHaveBets);
                         })()}
                         style={{ 
@@ -1979,13 +1909,7 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                             backgroundColor: (() => {
                                 const localHasBets = players.some(p => (p.bet ?? 0) > 0 || (p.hand?.bet ?? 0) > 0);
                                 const serverHasBets = server?.blackjackGameState?.players?.some(p => (p.bet ?? 0) > 0 || (p.hand?.bet ?? 0) > 0) || false;
-                                const seatsHaveBets = seats.some(seat => {
-                                    if (!seat.occupant || seat.occupant.isSittingOut) return false;
-                                    const localPlayer = players.find(p => p.user.name === seat.occupant?.user.name && p.seatId === seat.id);
-                                    const serverPlayer = server?.blackjackGameState?.players?.find(p => p.user.name === seat.occupant?.user.name && p.seatId === seat.id);
-                                    return (localPlayer && (localPlayer.bet > 0 || (localPlayer.hand?.bet ?? 0) > 0)) ||
-                                           (serverPlayer && (serverPlayer.bet > 0 || (serverPlayer.hand?.bet ?? 0) > 0));
-                                });
+                                const seatsHaveBets = seats.some(checkSeatHasBet);
                                 return (localHasBets || serverHasBets || seatsHaveBets) ? '#22c55e' : '#666';
                             })(),
                             fontWeight: 'bold',
@@ -1993,25 +1917,13 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                             border: (() => {
                                 const localHasBets = players.some(p => (p.bet ?? 0) > 0 || (p.hand?.bet ?? 0) > 0);
                                 const serverHasBets = server?.blackjackGameState?.players?.some(p => (p.bet ?? 0) > 0 || (p.hand?.bet ?? 0) > 0) || false;
-                                const seatsHaveBets = seats.some(seat => {
-                                    if (!seat.occupant || seat.occupant.isSittingOut) return false;
-                                    const localPlayer = players.find(p => p.user.name === seat.occupant?.user.name && p.seatId === seat.id);
-                                    const serverPlayer = server?.blackjackGameState?.players?.find(p => p.user.name === seat.occupant?.user.name && p.seatId === seat.id);
-                                    return (localPlayer && (localPlayer.bet > 0 || (localPlayer.hand?.bet ?? 0) > 0)) ||
-                                           (serverPlayer && (serverPlayer.bet > 0 || (serverPlayer.hand?.bet ?? 0) > 0));
-                                });
+                                const seatsHaveBets = seats.some(checkSeatHasBet);
                                 return (localHasBets || serverHasBets || seatsHaveBets) ? '3px solid #16a34a' : '3px solid #555';
                             })(),
                             boxShadow: (() => {
                                 const localHasBets = players.some(p => (p.bet ?? 0) > 0 || (p.hand?.bet ?? 0) > 0);
                                 const serverHasBets = server?.blackjackGameState?.players?.some(p => (p.bet ?? 0) > 0 || (p.hand?.bet ?? 0) > 0) || false;
-                                const seatsHaveBets = seats.some(seat => {
-                                    if (!seat.occupant || seat.occupant.isSittingOut) return false;
-                                    const localPlayer = players.find(p => p.user.name === seat.occupant?.user.name && p.seatId === seat.id);
-                                    const serverPlayer = server?.blackjackGameState?.players?.find(p => p.user.name === seat.occupant?.user.name && p.seatId === seat.id);
-                                    return (localPlayer && (localPlayer.bet > 0 || (localPlayer.hand?.bet ?? 0) > 0)) ||
-                                           (serverPlayer && (serverPlayer.bet > 0 || (serverPlayer.hand?.bet ?? 0) > 0));
-                                });
+                                const seatsHaveBets = seats.some(checkSeatHasBet);
                                 return (localHasBets || serverHasBets || seatsHaveBets) ? '0 4px 15px rgba(34, 197, 94, 0.4)' : 'none';
                             })(),
                             color: '#fff'
@@ -2020,15 +1932,7 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
                         {(() => {
                             const localHasBets = players.some(p => (p.bet ?? 0) > 0 || (p.hand?.bet ?? 0) > 0);
                             const serverHasBets = server?.blackjackGameState?.players?.some(p => (p.bet ?? 0) > 0 || (p.hand?.bet ?? 0) > 0) || false;
-                            const seatsHaveBets = seats.some(seat => {
-                                if (!seat.occupant || seat.occupant.isSittingOut) return false;
-                                // Check both local and server state for bets
-                                const localPlayer = players.find(p => p.user.name === seat.occupant?.user.name && p.seatId === seat.id);
-                                const serverPlayer = server?.blackjackGameState?.players?.find(p => p.user.name === seat.occupant?.user.name && p.seatId === seat.id);
-                                const hasLocalBet = localPlayer && (localPlayer.bet > 0 || (localPlayer.hand?.bet ?? 0) > 0);
-                                const hasServerBet = serverPlayer && (serverPlayer.bet > 0 || (serverPlayer.hand?.bet ?? 0) > 0);
-                                return hasLocalBet || hasServerBet;
-                            });
+                            const seatsHaveBets = seats.some(checkSeatHasBet);
                             return (localHasBets || serverHasBets || seatsHaveBets) ? 'DEAL CARDS' : 'Place Bets First';
                         })()}
                     </button>
@@ -2036,7 +1940,7 @@ export function BlackjackMultiplayerGame({ onBackToMap }: BlackjackMultiplayerGa
             )}
 
             {/* Action Buttons - Right side (only for current player) - works for single or multiple players */}
-            {gamePhase === "player_turn" && currentPlayerId === userData.user?.name && mySeat && (
+            {gamePhase === "player_turn" && normalizeName(currentPlayerId) === normalizeName(userData.user?.name) && mySeat && (
                 <div style={{
                     position: 'absolute',
                     bottom: '20px',
