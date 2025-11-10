@@ -14,3 +14,7 @@ export * from './PokerLobbyState';
 export * from './StartPokerMessage';
 export * from './PokerActionMessage';
 export * from './PokerGameStateMessage';
+export * from './JoinBlackjackMessage';
+export * from './BlackjackActionMessage';
+export * from './BlackjackLobbyState';
+export * from './BlackjackGameStateMessage';
