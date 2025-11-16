@@ -57,16 +57,23 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
      */
     const isRequestValid = useCallback(() => {
         // Validate host
-        if (!request.host) {
+        if (!request.host || request.host.trim() === '') {
             console.error(`Invalid host: ${request.host}`);
             setError('Invalid host');
             return false;
         }
 
-        // Validate port
-        if (isNaN(request.port) || request.port < MIN_PORT || request.port > MAX_PORT) {
-            console.error(`Invalid port: ${request.port}`);
-            setError('Invalid port');
+        // Validate port - parse as number and check range
+        const parsedPort = Number(request.port);
+        if (!Number.isFinite(parsedPort) || parsedPort <= 0 || parsedPort > MAX_PORT) {
+            // If port is -1 or NaN, it's the initial invalid state - don't error, just return false
+            // The actual port will be set when user submits the form
+            if (parsedPort === -1 || isNaN(parsedPort)) {
+                // Silently return false - this is expected on initial load
+                return false;
+            }
+            console.error(`Invalid port: ${parsedPort} (must be between ${MIN_PORT} and ${MAX_PORT})`);
+            setError(`Invalid port: ${parsedPort}`);
             return false;
         }
 
@@ -118,8 +125,22 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         shouldAttemptConnectionRef.current = false;
 
         try {
-            console.log(`Creating WebSocket connection to ws://${request.host}:${request.port}`);
-            return new WebSocket(`ws://${request.host}:${request.port}`);
+            // Debug: log raw values to check for hidden characters
+            console.log(`[WebSocket] Host raw:`, JSON.stringify(request.host), `Port raw:`, JSON.stringify(request.port));
+            
+            // Ensure port is a valid number
+            const parsedPort = Number(request.port);
+            if (!Number.isFinite(parsedPort) || parsedPort <= 0 || parsedPort > MAX_PORT) {
+                console.error(`[WebSocket] Invalid port after parsing: ${parsedPort}`);
+                setError(`Invalid port: ${parsedPort}`);
+                return undefined;
+            }
+            
+            // Trim host to remove any whitespace
+            const cleanHost = request.host.trim();
+            const url = `ws://${cleanHost}:${parsedPort}`;
+            console.log(`[WebSocket] Creating WebSocket connection to ${url}`);
+            return new WebSocket(url);
         } catch (err) {
             setError(`Failed to create WebSocket: ${err}`);
             console.error('Failed to create WebSocket:', err);

@@ -85,8 +85,12 @@ export class GameServer {
     }
 
     public start() {
-        this.wss.on('connection', (ws: WebSocket) => {
-            this.onClientConnect(ws);
+        this.wss.on('connection', (ws: WebSocket, req) => {
+            // Log connection with client info
+            const remoteAddress = req.socket.remoteAddress;
+            const remotePort = req.socket.remotePort;
+            console.log(`[Backend] Client connected from ${remoteAddress}:${remotePort}`);
+            this.onClientConnect(ws, remoteAddress, remotePort);
         });
 
         console.log(`WebSocket server is running on ws://${this.host}:${this.port}`);
@@ -98,16 +102,27 @@ export class GameServer {
         });
     }
 
-    private onClientConnect(ws: WebSocket) {
-        console.log('Client connected');
+    private onClientConnect(ws: WebSocket, remoteAddress?: string, remotePort?: number) {
+        const clientInfo = remoteAddress && remotePort ? `${remoteAddress}:${remotePort}` : 'unknown';
         this.clients.add(ws);
 
         ws.on('message', (data) => {
             this.processMessage(data.toString(), ws);
         });
 
-        ws.on('close', () => {
-            console.log('Client disconnected');
+        ws.on('error', (err: Error) => {
+            console.error(`[Backend] WebSocket error from ${clientInfo}:`, err);
+        });
+
+        ws.on('close', (code: number, reason: Buffer) => {
+            const reasonStr = reason && reason.length > 0 ? reason.toString() : '(no reason provided)';
+            // Common close codes: 1000=normal, 1001=going away, 1006=abnormal (no close frame), 1005=no status code
+            const codeDescription = code === 1000 ? 'Normal closure' 
+                : code === 1001 ? 'Going away' 
+                : code === 1005 ? 'No status code (abnormal closure)' 
+                : code === 1006 ? 'Abnormal closure (no close frame received)' 
+                : `Code ${code}`;
+            console.log(`[Backend] Client disconnected from ${clientInfo}: ${codeDescription} (${code}), Reason: ${reasonStr}`);
             console.log(`[Backend] Total clients before removal: ${this.clients.size}`);
             console.log(`[Backend] Total users in userBySocket: ${this.userBySocket.size}`);
             console.log(`[Backend] Total users in lastKnownPositions: ${this.lastKnownPositions.size}`);

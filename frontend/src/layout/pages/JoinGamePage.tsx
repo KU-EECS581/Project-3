@@ -19,11 +19,17 @@ export function JoinGamePage() {
     const navigate = useNavigate();
 
     const handleJoinGame = useCallback((host: string, port: number) => {
+        // Parse port as number, fallback to default if invalid
+        const parsedPort = Number(port);
+        const validPort = Number.isFinite(parsedPort) && parsedPort > 0 && parsedPort <= 65535 
+            ? parsedPort 
+            : 51337; // DEFAULT_PORT
+        
         server.setRequest(
         (prev) => ({
             ...prev,
-            host,
-            port: Number(port),
+            host: host.trim(), // Trim whitespace from host
+            port: validPort,
             // Bind the connection user to the created user if available
             user: userData.user ?? prev.user,
         }));
