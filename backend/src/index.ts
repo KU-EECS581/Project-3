@@ -14,8 +14,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Retrieve host and port from environment variables or use defaults
-const host = process.env.HOST || undefined;
-const port = process.env.PORT ? Number(process.env.PORT) : undefined;
+// Defaults to 0.0.0.0:51337 for LAN multiplayer
+const host = process.env.HOST || process.env.GAME_SERVER_HOST || undefined;
+const port = process.env.PORT ? Number(process.env.PORT) : (process.env.GAME_SERVER_PORT ? Number(process.env.GAME_SERVER_PORT) : undefined);
 
 // Start the game server
 const server = new GameServer(host, port);

@@ -31,6 +31,12 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
     const [blackjackLobbyState, setBlackjackLobbyState] = useState<ReturnType<typeof BlackjackLobbyStateSchema.parse> | undefined>(undefined);
     const [blackjackGameState, setBlackjackGameState] = useState<ReturnType<typeof BlackjackGameStateSchema.parse> | undefined>(undefined);
     
+    // Track connection attempt to prevent rapid reconnection loops
+    const connectionAttemptRef = useRef<string | null>(null);
+    const shouldAttemptConnectionRef = useRef(true);
+    // Track request changes to allow manual retry (using state so useMemo can depend on it)
+    const [connectionRetryKey, setConnectionRetryKey] = useState(0);
+    
     // Keep a ref to the latest user without retriggering socket effect
     useEffect(() => {
         userRef.current = request.user;
@@ -75,20 +81,55 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         return true;
     }, [request]);
 
-    // Create the WebSocket instance when request changes (host/port/user)
+    // Wrapper for setRequest that allows manual retry by resetting connection attempt
+    const setRequestWithRetry = useCallback((updater: React.SetStateAction<ServerConnectionRequest>) => {
+        setRequest((prev) => {
+            const next = typeof updater === 'function' ? updater(prev) : updater;
+            // If host or port changed, increment counter to force WebSocket recreation
+            if (next.host !== prev.host || next.port !== prev.port) {
+                setConnectionRetryKey(prev => prev + 1);
+            }
+            return next;
+        });
+    }, []);
+
+    // Create the WebSocket instance when host/port changes (not when user changes)
+    // Only create if we should attempt connection and the connection target has actually changed
     const ws = useMemo(() => {
         if (!isRequestValid()) {
             return undefined;
         }
 
+        // Create a unique key for this connection attempt (only based on host:port, not user)
+        const connectionKey = `${request.host}:${request.port}`;
+        
+        // If connection key changed, reset the attempt flag to allow new connection
+        if (connectionAttemptRef.current !== connectionKey) {
+            shouldAttemptConnectionRef.current = true;
+        }
+        
+        // If we're already attempting this connection, don't create a new WebSocket
+        if (connectionAttemptRef.current === connectionKey && !shouldAttemptConnectionRef.current) {
+            return undefined;
+        }
+
+        // Mark that we're attempting this connection
+        connectionAttemptRef.current = connectionKey;
+        shouldAttemptConnectionRef.current = false;
+
         try {
+            console.log(`Creating WebSocket connection to ws://${request.host}:${request.port}`);
             return new WebSocket(`ws://${request.host}:${request.port}`);
         } catch (err) {
             setError(`Failed to create WebSocket: ${err}`);
             console.error('Failed to create WebSocket:', err);
+            connectionAttemptRef.current = null;
+            shouldAttemptConnectionRef.current = true;
             return undefined;
         }
-    }, [request, isRequestValid]);
+        // Include connectionRetryKey to allow manual retry by calling setRequest again
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [request.host, request.port, connectionRetryKey, isRequestValid]);
 
     // Keep track of readyState in React state so renders update when it changes
     const [readyState, setReadyState] = useState<number | undefined>(ws?.readyState);
@@ -193,6 +234,7 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         const handleOpen = () => {
             console.log('WebSocket connection established');
             setReadyState(ws.readyState);
+            setError(undefined); // Clear any previous errors on successful connection
 
             // Announce presence immediately so other clients see us without waiting for movement
             try {
@@ -316,16 +358,29 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             if (!event.wasClean) {
                 console.error(`WebSocket closed unexpectedly: Code ${event.code}, Reason: ${event.reason ?? 'No reason provided'}`);
                 setError(`WebSocket closed unexpectedly: Code ${event.code}, Reason: ${event.reason ?? 'No reason provided'}`);
+            } else {
+                // Clear error on clean close
+                setError(undefined);
             }
 
             console.log('WebSocket connection closed');
             setReadyState(ws.readyState);
+            
+            // Reset connection attempt tracking on close
+            connectionAttemptRef.current = null;
+            shouldAttemptConnectionRef.current = true;
         };
 
         const handleError = (error: Event) => {
             console.error('WebSocket error:', error);
             // readyState may be CLOSING/CLOSED after errors
             setReadyState(ws.readyState);
+            
+            // Set error but don't spam connection attempts
+            const connectionKey = `${request.host}:${request.port}`;
+            if (connectionAttemptRef.current === connectionKey) {
+                setError(`Failed to connect to ${request.host}:${request.port}. Check that the server is running and accessible.`);
+            }
         };
 
         ws.addEventListener('open', handleOpen);
@@ -527,7 +582,7 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             receivedMessages,
             players,
             addPlayer,
-            setRequest,
+            setRequest: setRequestWithRetry,
             disconnect,
             host: request.host,
             port: request.port,
