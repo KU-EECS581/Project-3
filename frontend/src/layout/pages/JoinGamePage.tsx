@@ -65,7 +65,7 @@ export function JoinGamePage() {
                 disabled={server.isConnecting}
                 onJoinGame={handleJoinGame}
                 />
-            {server.isConnecting && <h2>Connecting to {server.host}:{server.port}...</h2>}
+            {server.isConnecting && server.host && server.port && <h2>Connecting to {server.host}:{server.port}...</h2>}
             {server.error && <h3 style={{ color: 'red' }}>Error: {server.error}</h3>}
         </>
     );

@@ -22,8 +22,8 @@ export interface GameServerContextProps {
     addPlayer: (player: PlayerCharacter) => void;
     setRequest: React.Dispatch<React.SetStateAction<ServerConnectionRequest>>;
     disconnect: () => void;
-    host: string;
-    port: number;
+    host: string | undefined;
+    port: number | undefined;
     error: string | undefined;
     pokerPlayers: User[];
     pokerInGame: boolean;

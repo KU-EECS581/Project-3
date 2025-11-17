@@ -8,7 +8,7 @@
 import type { User } from "~middleware/index";
 
 export interface ServerConnectionRequest {
-    host: string;
-    port: number;
+    host?: string; // Optional - only set when user explicitly joins
+    port?: number; // Optional - only set when user explicitly joins
     user: User; // TODO/CONSIDER: do we need this for the connection request?
 }

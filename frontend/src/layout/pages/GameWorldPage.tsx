@@ -27,7 +27,7 @@ export function GameWorldPage() {
   // Show connecting state
   // TODO: Better loading visualization or component
   if (server.isConnecting) {
-    return <h2>Connecting to {server.host}:{server.port}...</h2>;
+    return <h2>Connecting{server.host && server.port ? ` to ${server.host}:${server.port}` : ''}...</h2>;
   }
 
   // Show disconnecting state

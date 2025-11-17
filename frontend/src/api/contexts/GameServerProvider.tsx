@@ -16,9 +16,10 @@ import { z } from "zod";
 import { GameMessageKey } from "~middleware/enums";
 
 export function GameServerProvider({children}: {children: React.ReactNode}) {
+    // Start with no host/port to prevent auto-connecting on page load
     const [request, setRequest] = useState<ServerConnectionRequest>({
-        host: DEFAULT_HOST,
-        port: DEFAULT_PORT,
+        host: undefined,
+        port: undefined,
         user: DEFAULT_USER
     });
     const [error, setError] = useState<string | undefined>(undefined);
@@ -56,9 +57,15 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
      * @returns True if the request is valid, false otherwise.
      */
     const isRequestValid = useCallback(() => {
+        // Don't connect until both host and port are explicitly set by user
+        if (!request.host || !request.port) {
+            // Silently return false - this is expected before user joins
+            return false;
+        }
+
         // Validate host
-        if (!request.host || request.host.trim() === '') {
-            console.error(`Invalid host: ${request.host}`);
+        if (request.host.trim() === '') {
+            console.error(`Invalid host: empty string`);
             setError('Invalid host');
             return false;
         }
@@ -66,12 +73,6 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         // Validate port - parse as number and check range
         const parsedPort = Number(request.port);
         if (!Number.isFinite(parsedPort) || parsedPort <= 0 || parsedPort > MAX_PORT) {
-            // If port is -1 or NaN, it's the initial invalid state - don't error, just return false
-            // The actual port will be set when user submits the form
-            if (parsedPort === -1 || isNaN(parsedPort)) {
-                // Silently return false - this is expected on initial load
-                return false;
-            }
             console.error(`Invalid port: ${parsedPort} (must be between ${MIN_PORT} and ${MAX_PORT})`);
             setError(`Invalid port: ${parsedPort}`);
             return false;
@@ -102,7 +103,13 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
 
     // Create the WebSocket instance when host/port changes (not when user changes)
     // Only create if we should attempt connection and the connection target has actually changed
+    // IMPORTANT: Only connect when both host and port are explicitly set by the user
     const ws = useMemo(() => {
+        // Guard: Don't create WebSocket until user explicitly sets host and port
+        if (!request.host || !request.port) {
+            return undefined;
+        }
+
         if (!isRequestValid()) {
             return undefined;
         }
