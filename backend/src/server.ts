@@ -104,14 +104,19 @@ export class GameServer {
 
     private onClientConnect(ws: WebSocket, remoteAddress?: string, remotePort?: number) {
         const clientInfo = remoteAddress && remotePort ? `${remoteAddress}:${remotePort}` : 'unknown';
+        console.log(`[Backend] onClientConnect called for ${clientInfo}, readyState: ${ws.readyState}`);
+        
         this.clients.add(ws);
+        console.log(`[Backend] Added client ${clientInfo} to clients set. Total clients: ${this.clients.size}`);
 
         ws.on('message', (data) => {
+            console.log(`[Backend] Received message from ${clientInfo}:`, data.toString().substring(0, 100));
             this.processMessage(data.toString(), ws);
         });
 
         ws.on('error', (err: Error) => {
             console.error(`[Backend] WebSocket error from ${clientInfo}:`, err);
+            console.error(`[Backend] Error stack:`, err.stack);
         });
 
         ws.on('close', (code: number, reason: Buffer) => {
@@ -219,11 +224,21 @@ export class GameServer {
             }
         });
 
-        ws.send('Welcome to the WebSocket server!');
+        // Send welcome message
+        try {
+            if (ws.readyState === WebSocket.OPEN) {
+                console.log(`[Backend] Sending welcome message to ${clientInfo}`);
+                ws.send('Welcome to the WebSocket server!');
+            } else {
+                console.warn(`[Backend] Cannot send welcome message to ${clientInfo} - readyState is ${ws.readyState} (OPEN=${WebSocket.OPEN})`);
+            }
+        } catch (e) {
+            console.error(`[Backend] Error sending welcome message to ${clientInfo}:`, e);
+        }
 
         // Immediately sync existing player positions to the newcomer
         try {
-            console.log(`[Backend] Syncing ${this.lastKnownPositions.size} existing player positions to new client`);
+            console.log(`[Backend] Syncing ${this.lastKnownPositions.size} existing player positions to new client ${clientInfo}`);
             this.lastKnownPositions.forEach((movement) => {
                 if (ws.readyState === WebSocket.OPEN) {
                     const envelope = {
@@ -233,12 +248,16 @@ export class GameServer {
                         ts: Date.now(),
                     } as const;
                     ws.send(JSON.stringify(envelope));
-                    console.log(`[Backend] Sent position for ${movement.user.name} to new client`);
+                    console.log(`[Backend] Sent position for ${movement.user.name} to new client ${clientInfo}`);
+                } else {
+                    console.warn(`[Backend] Cannot send position for ${movement.user.name} - readyState is ${ws.readyState}`);
                 }
             });
         } catch (e) {
-            console.error('Failed to sync existing players to new client:', e);
+            console.error(`[Backend] Failed to sync existing players to new client ${clientInfo}:`, e);
         }
+        
+        console.log(`[Backend] Finished setting up client ${clientInfo}`);
     }
 
     private processMessage(message: string, ws: WebSocket) {
