@@ -8,11 +8,11 @@
  * Default port: 51338 (different from game server to avoid conflicts)
  */
 
-const WebSocket = require('ws');
+import WebSocket, { WebSocketServer } from 'ws';
 
 const port = process.argv[2] ? parseInt(process.argv[2]) : 51338;
 
-const wss = new WebSocket.Server({ 
+const wss = new WebSocketServer({ 
     host: '0.0.0.0',  // Listen on all interfaces
     port: port 
 });
