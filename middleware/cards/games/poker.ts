@@ -1,6 +1,11 @@
 /**
  * @file poker.ts
- * @description Exports types and interfaces related to poker games.
+ * @description Poker game types and interfaces (streets, player/table state).
+ * @class N/A
+ * @module Poker Types
+ * @inputs N/A
+ * @outputs TypeScript interfaces & constants for poker state
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-28
  */

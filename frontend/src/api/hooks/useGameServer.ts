@@ -1,6 +1,11 @@
 /**
  * @file useGameServer.ts
- * @description Custom hook for managing WebSocket connections to the game server.
+ * @description Hook exposing game server connection & action helpers.
+ * @class useGameServer
+ * @module Hooks/Server
+ * @inputs GameServerContext
+ * @outputs Server state & action functions
+ * @external_sources React
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */

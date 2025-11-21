@@ -1,6 +1,13 @@
 /**
  * @file utils.ts
- * @description Utility functions for blackjack game logic
+ * @description Blackjack hand evaluation & dealer decision utilities.
+ * @class N/A (utility functions)
+ * @module Components/Blackjack
+ * @inputs Arrays of Card objects for evaluation
+ * @outputs Value calculations (hard/soft/blackjack), bust checks, dealer hit decision
+ * @external_sources Middleware card enums
+ * @author Riley Meyerkorth
+ * @date 2025-10-26
  */
 
 import type { Card } from "~middleware/cards";

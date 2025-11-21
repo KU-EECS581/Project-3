@@ -1,6 +1,13 @@
 /**
  * @file BlackjackGame.tsx
- * @description Core blackjack game logic component
+ * @description Singleplayer blackjack game logic (betting, dealing, actions, resolution).
+ * @class BlackjackGame
+ * @module Components/Blackjack
+ * @inputs player model, optional initialBet, onGameEnd callback
+ * @outputs Game UI, result callback with winnings & outcome
+ * @external_sources React hooks, middleware Deck + card utilities, UserData stats context
+ * @author Riley Meyerkorth
+ * @date 2025-10-26
  */
 
 import { useCallback, useEffect, useMemo, useState, useContext } from "react";

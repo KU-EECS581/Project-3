@@ -1,6 +1,11 @@
 /**
  * @file index.ts
- * @description A barrel file exporting all API sub-folders.
+ * @description Barrel file exporting API sub-folders.
+ * @class N/A
+ * @module API
+ * @inputs N/A
+ * @outputs Re-exported API modules
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */

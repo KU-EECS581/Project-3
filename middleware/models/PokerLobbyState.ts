@@ -1,6 +1,11 @@
 /**
  * @file PokerLobbyState.ts
- * @description Represents the state of a poker lobby broadcast to clients.
+ * @description State of a poker lobby broadcast to clients.
+ * @class N/A
+ * @module Poker Models
+ * @inputs N/A
+ * @outputs Lobby state schema & interface
+ * @external_sources zod (schema validation)
  * @author Riley Meyerkorth
  * @date 2025-10-28
  */

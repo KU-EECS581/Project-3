@@ -1,6 +1,11 @@
 /**
  * @file PlayableMap.tsx
- * @description Component representing the playable map area.
+ * @description Root interactive map surface containing entities & players.
+ * @class PlayableMap
+ * @module Components/Map
+ * @inputs players list, self player, movement handler, entity enter/exit callbacks, debug
+ * @outputs Map layout, entity and player components
+ * @external_sources React hooks, local collision/animation hooks
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */

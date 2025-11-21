@@ -1,6 +1,11 @@
 /**
  * @file Deck.ts
- * @description Contains deck functionality for card games, including shuffling and dealing.
+ * @description Deck functionality for card games (initialize, shuffle, deal, reset).
+ * @class Deck
+ * @module Cards
+ * @inputs N/A (constructor creates full deck automatically)
+ * @outputs Shuffled deck state, dealt Card objects
+ * @external_sources N/A
  * @author Aiden Burke
  * @date 2025-10-27
  */

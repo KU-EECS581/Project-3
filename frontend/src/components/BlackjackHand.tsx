@@ -1,6 +1,12 @@
 /**
  * @file BlackjackHand.tsx
- * @description Component for displaying a blackjack hand with animated cards.
+ * @description Animated blackjack hand rendering + staged dealing.
+ * @class BlackjackHand
+ * @module Components/Blackjack
+ * @inputs cards, hideFirstCard, position, size config, deckPosition
+ * @outputs Animated card elements positioned dynamically
+ * @external_sources React (hooks)
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 

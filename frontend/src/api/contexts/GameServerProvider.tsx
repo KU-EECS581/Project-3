@@ -1,6 +1,11 @@
 /**
  * @file GameServerProvider.tsx
- * @description Context for game server connection.
+ * @description Provider component managing WebSocket lifecycle & game synchronization.
+ * @class GameServerProvider
+ * @module Contexts/Server
+ * @inputs React children
+ * @outputs Connection state & action handlers
+ * @external_sources WebSocket API, zod, React
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

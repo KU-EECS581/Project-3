@@ -1,3 +1,14 @@
+/**
+ * @file BlackjackTable.tsx
+ * @description Multiplayer blackjack table layout (seats, dealer, state panels).
+ * @class BlackjackTable
+ * @module Components/Blackjack
+ * @inputs seats, me player, gameState, action callbacks
+ * @outputs Table visualization + action buttons
+ * @external_sources React hooks, UserDataContext
+ * @author Riley Meyerkorth
+ * @date 2025-11-20
+ */
 import { useContext, useMemo } from "react";
 import type { BJSeat, BJPlayer, TableGameState } from "./types";
 import { UserDataContext } from "@/contexts/UserDataContext";

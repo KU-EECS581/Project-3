@@ -1,6 +1,11 @@
 /**
  * @file useGameWorld.ts
- * @description Custom hook for managing game world interactions and state.
+ * @description Game world interaction hook (movement, entity entry, debug toggles).
+ * @class useGameWorld
+ * @module Hooks/GameWorld
+ * @inputs Mouse position, server connection
+ * @outputs Handlers (movement, enter entity, disconnect, toggle debug)
+ * @external_sources React Router
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */

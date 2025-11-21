@@ -1,6 +1,11 @@
 /**
- * @file UserDataProvider.ts
- * @description Context provider for user data.
+ * @file UserDataProvider.tsx
+ * @description Provider component handling user persistence & currency mutation.
+ * @class UserDataProvider
+ * @module Contexts/User
+ * @inputs React children
+ * @outputs User data state & CRUD helpers
+ * @external_sources Web Storage API, React
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

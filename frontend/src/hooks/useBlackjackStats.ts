@@ -1,3 +1,14 @@
+/**
+ * @file useBlackjackStats.ts
+ * @description Hook for tracking blackjack wins/losses & win rate (localStorage persistence).
+ * @class useBlackjackStats
+ * @module Hooks/Blackjack
+ * @inputs Mode (singleplayer|multiplayer), optional identifier
+ * @outputs Stats object & mutators (recordResult, resetStats)
+ * @external_sources Web Storage API
+ * @author Riley Meyerkorth
+ * @date 2025-10-28
+ */
 import { useState, useEffect, useCallback } from 'react';
 
 export interface BlackjackStats {

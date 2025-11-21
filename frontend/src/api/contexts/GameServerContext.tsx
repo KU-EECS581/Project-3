@@ -1,6 +1,11 @@
 /**
  * @file GameServerContext.tsx
- * @description Context for game server connection.
+ * @description React context describing game server connection & game states.
+ * @class GameServerContext
+ * @module Contexts/Server
+ * @inputs N/A
+ * @outputs GameServerContext object
+ * @external_sources WebSocket API, React
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

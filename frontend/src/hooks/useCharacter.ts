@@ -1,6 +1,11 @@
 /**
  * @file useCharacter.ts
- * @description Custom hook for managing the character on the playable map.
+ * @description Hook for accessing current player character & bounding box.
+ * @class useCharacter
+ * @module Hooks/Character
+ * @inputs User data context, game server players
+ * @outputs Player character object & bounding box
+ * @external_sources React
  * @author Riley Meyerkorth
  * @date 2025-10-27
  */

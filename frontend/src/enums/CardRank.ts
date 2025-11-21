@@ -1,6 +1,12 @@
 /**
  * @file CardRank.ts
  * @description Enum for playing card ranks.
+ * @class N/A
+ * @module Enums/Cards
+ * @inputs N/A
+ * @outputs CardRank constant & type
+ * @external_sources N/A
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 

@@ -1,6 +1,11 @@
 /**
  * @file constants.ts
- * @description Barrel file for constants.
+ * @description Frontend constants (map entities, defaults, user placeholders).
+ * @class N/A
+ * @module Frontend Constants
+ * @inputs N/A
+ * @outputs Exported constant values & arrays
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */

@@ -1,6 +1,12 @@
 /**
  * @file useDeck.ts
  * @description Hook for accessing the deck context.
+ * @class useDeck
+ * @module Hooks/Deck
+ * @inputs React context (DeckContext)
+ * @outputs Deck state & helpers from provider
+ * @external_sources React
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 

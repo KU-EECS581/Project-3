@@ -1,6 +1,13 @@
 /**
  * @file BlackjackMultiplayerGame.tsx
- * @description Multiplayer blackjack game component matching singleplayer layout
+ * @description Full multiplayer blackjack orchestration (seats, dealing, turn logic, payouts).
+ * @class BlackjackMultiplayerGame
+ * @module Components/Blackjack
+ * @inputs onBackToMap navigation callback
+ * @outputs Real-time UI synced to server state, balance updates
+ * @external_sources React hooks, GameServer & UserData contexts
+ * @author Riley Meyerkorth
+ * @date 2025-11-20
  */
 
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";

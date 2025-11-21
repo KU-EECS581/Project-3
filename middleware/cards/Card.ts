@@ -1,6 +1,11 @@
 /**
  * @file Card.ts
- * @description Contains card types, suits, ranks, helpers
+ * @description Contains card types, suits, ranks, and helper utilities.
+ * @class Card
+ * @module Cards
+ * @inputs Suit, Rank parameters for constructors and helpers
+ * @outputs Card instances and card utility functions
+ * @external_sources zod (runtime schema validation)
  * @author Aiden Burke
  * @date 2025-10-27
  */

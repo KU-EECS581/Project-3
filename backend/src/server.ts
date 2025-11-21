@@ -1,6 +1,11 @@
 /**
  * @file server.ts
  * @description Simple WebSocket server for the backend.
+ * @class GameServer
+ * @module N/A
+ * @inputs WebSocket messages from clients
+ * @outputs Broadcasted game state and lobby messages
+ * @external_sources pokersolver (hand evaluation library)
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */

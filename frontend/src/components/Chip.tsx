@@ -1,6 +1,12 @@
 /**
  * @file Chip.tsx
- * @description Component for rendering casino chips/poker chips.
+ * @description Casino chip SVG component with value-based coloring.
+ * @class Chip
+ * @module Components/Casino
+ * @inputs value (number), size, color override, style/className
+ * @outputs <Chip/> visual SVG element
+ * @external_sources React
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 

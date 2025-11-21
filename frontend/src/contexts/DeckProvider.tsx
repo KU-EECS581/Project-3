@@ -1,6 +1,12 @@
 /**
  * @file DeckProvider.tsx
- * @description Provider for managing a shared deck of cards.
+ * @description Provider component supplying deck operations via context.
+ * @class DeckProvider
+ * @module Contexts/Deck
+ * @inputs React children
+ * @outputs Deck state, shuffle/deal/reset handlers
+ * @external_sources React
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 

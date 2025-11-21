@@ -1,6 +1,11 @@
 /**
  * @file ConnectedPlayersList.tsx
- * @description List of connected players in a game lobby.
+ * @description Renders list of connected lobby players.
+ * @class ConnectedPlayersList
+ * @module Components/Lobby
+ * @inputs players array (User[])
+ * @outputs <ul/> with player name <li/> items
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-28
  */

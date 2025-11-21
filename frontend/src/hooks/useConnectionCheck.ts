@@ -1,6 +1,11 @@
 /**
  * @file useConnectionCheck.ts
- * @description Custom hook for checking if the connection to the game server is active. If not, redirects to the home page.
+ * @description Hook ensuring active server connection; redirects if closed.
+ * @class useConnectionCheck
+ * @module Hooks/Server
+ * @inputs GameServer context, React Router navigate
+ * @outputs Side-effect redirect logic
+ * @external_sources React Router
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */

@@ -1,6 +1,11 @@
 /**
  * @file BlackjackGamePage.tsx
- * @description Page for the blackjack game with up to 5 simultaneous hands.
+ * @description Versatile blackjack page (singleplayer multi-hand & multiplayer).
+ * @class BlackjackGamePage
+ * @module Pages/Blackjack
+ * @inputs Mode selection, deck & user contexts, hand actions
+ * @outputs Balance changes, hand result notifications
+ * @external_sources React hooks, custom deck/user/stat hooks
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

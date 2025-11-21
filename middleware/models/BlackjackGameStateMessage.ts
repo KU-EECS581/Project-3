@@ -1,6 +1,13 @@
 /**
  * @file BlackjackGameStateMessage.ts
  * @description State of the blackjack game.
+ * @class N/A
+ * @module Blackjack Models
+ * @inputs N/A
+ * @outputs Game state schemas & types
+ * @external_sources zod (schema validation)
+ * @author Riley Meyerkorth
+ * @date 2025-10-28
  */
 import * as z from 'zod';
 import { CardSchema } from '../cards';

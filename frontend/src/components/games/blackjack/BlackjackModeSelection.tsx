@@ -1,6 +1,13 @@
 /**
  * @file BlackjackModeSelection.tsx
- * @description Component for selecting singleplayer or multiplayer mode
+ * @description Mode selection overlay (singleplayer vs multiplayer blackjack).
+ * @class BlackjackModeSelection
+ * @module Components/Blackjack
+ * @inputs onSelectMode callback
+ * @outputs Emits chosen mode string
+ * @external_sources React (useCallback)
+ * @author Riley Meyerkorth
+ * @date 2025-11-20
  */
 
 import { useCallback } from "react";

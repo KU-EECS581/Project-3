@@ -1,6 +1,13 @@
 /**
  * @file BlackjackGameControls.tsx
- * @description Game controls overlay for blackjack (betting, hit, stand, etc.)
+ * @description Singleplayer blackjack control surface (betting & actions).
+ * @class BlackjackGameControls
+ * @module Components/Blackjack
+ * @inputs onGameStateUpdate, onGameEnd
+ * @outputs Table state object + game result callbacks
+ * @external_sources React hooks, UserDataContext, Deck from middleware
+ * @author Riley Meyerkorth
+ * @date 2025-11-20
  */
 
 import { useCallback, useEffect, useMemo, useState, useContext } from "react";

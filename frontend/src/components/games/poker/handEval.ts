@@ -1,6 +1,13 @@
 /**
- * Lightweight 7-card Texas Hold'em hand evaluator.
- * Given 5 community + up to 2 hole cards, returns best category and tiebreak ranks.
+ * @file handEval.ts
+ * @description Lightweight 7-card Texas Hold'em evaluator (best hand category & kickers).
+ * @class N/A (functions)
+ * @module Components/Poker
+ * @inputs Arrays of up to 7 cards (community + hole)
+ * @outputs EvaluatedHand (category, ranks, label)
+ * @external_sources Middleware card rank/suit types
+ * @author Riley Meyerkorth
+ * @date 2025-10-26
  */
 import type { Suit, Rank } from '~middleware/cards';
 

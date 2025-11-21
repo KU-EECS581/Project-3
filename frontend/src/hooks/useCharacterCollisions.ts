@@ -1,6 +1,11 @@
 /**
  * @file useCharacterCollisions.ts
- * @description Custom hook for managing character collisions on the playable map.
+ * @description Hook detecting player collisions with map entities (enter/exit events).
+ * @class useCharacterCollisions
+ * @module Hooks/Character
+ * @inputs Player bounding box, entity list
+ * @outputs Collision helpers & event triggers
+ * @external_sources React
  * @author Riley Meyerkorth
  * @date 2025-10-27
  */

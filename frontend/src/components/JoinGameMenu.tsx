@@ -1,6 +1,11 @@
 /**
  * @file JoinGameMenu.tsx
- * @description Form component for joining a game server.
+ * @description Form for specifying host/port and initiating server join.
+ * @class JoinGameMenu
+ * @module Components/Lobby
+ * @inputs onJoinGame(host,port), disabled/hidden flags
+ * @outputs Calls onJoinGame with parsed values
+ * @external_sources React (useCallback)
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */

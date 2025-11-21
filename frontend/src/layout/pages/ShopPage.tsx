@@ -1,6 +1,11 @@
 /**
  * @file ShopPage.tsx
- * @description Page for the shop.
+ * @description Placeholder in-world shop page.
+ * @class ShopPage
+ * @module Pages/Map
+ * @inputs Navigation
+ * @outputs Back navigation
+ * @external_sources React Router
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

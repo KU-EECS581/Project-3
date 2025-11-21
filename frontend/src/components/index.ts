@@ -1,6 +1,11 @@
 /**
  * @file index.ts
- * @description A barrel file exporting all components.
+ * @description Barrel export for shared UI/game components.
+ * @class N/A (barrel)
+ * @module Components
+ * @inputs N/A
+ * @outputs Re-exported component modules
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */

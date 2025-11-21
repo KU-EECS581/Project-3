@@ -1,6 +1,13 @@
 /**
  * @file BlackjackLobbyState.ts
  * @description State of the blackjack lobby/table.
+ * @class N/A
+ * @module Blackjack Models
+ * @inputs N/A
+ * @outputs Lobby state schema & types
+ * @external_sources zod (schema validation)
+ * @author Riley Meyerkorth
+ * @date 2025-10-28
  */
 import * as z from 'zod';
 import { UserSchema } from './User';

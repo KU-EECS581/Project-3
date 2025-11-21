@@ -1,6 +1,11 @@
 /**
  * @file GameMessage.ts
  * @description Generic, versioned WebSocket message envelope with typed payload.
+ * @class N/A
+ * @module Messages
+ * @inputs Key, version, payload object
+ * @outputs Message schemas, envelope types
+ * @external_sources zod (schema validation)
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

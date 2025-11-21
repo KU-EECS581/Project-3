@@ -1,6 +1,12 @@
 /**
  * @file AnimatedCard.tsx
- * @description Component that animates a card from one position to another.
+ * @description Imperative animation wrapper moving a playing card from deck to target.
+ * @class AnimatedCard
+ * @module Components/Cards
+ * @inputs card model, start/end coords, timing (duration/delay), faceDown
+ * @outputs Animated positioned Card component
+ * @external_sources React (hooks)
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 

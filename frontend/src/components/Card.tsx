@@ -1,6 +1,12 @@
 /**
  * @file Card.tsx
  * @description Component that renders a playing card as an SVG.
+ * @class Card (React Component)
+ * @module Components/Cards
+ * @inputs Card props (card, faceDown, width, height, className)
+ * @outputs SVG-rendered playing card element
+ * @external_sources React
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 

@@ -1,6 +1,13 @@
 /**
  * @file BlackjackActionMessage.ts
  * @description Message for blackjack game actions from a client.
+ * @class N/A
+ * @module Blackjack Messages
+ * @inputs User, action type, optional amount, optional seatId
+ * @outputs Serialized blackjack action message schema & type
+ * @external_sources zod (schema validation)
+ * @author Riley Meyerkorth
+ * @date 2025-10-28
  */
 import * as z from 'zod';
 import { UserSchema } from './User';

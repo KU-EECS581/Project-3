@@ -1,6 +1,11 @@
 /**
  * @file GameWorldPage.tsx
- * @description Page for the game world.
+ * @description Live game world page embedding PlayableMap + debug tools.
+ * @class GameWorldPage
+ * @module Pages/Map
+ * @inputs Server player list, movement callbacks, debug toggle
+ * @outputs Map interactions (movement/entity enter) & disconnect
+ * @external_sources Hooks (character/gameWorld/connection), React
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

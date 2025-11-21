@@ -1,6 +1,11 @@
 /**
  * @file constants.ts
  * @description Constants for the backend.
+ * @class N/A
+ * @module N/A
+ * @inputs N/A
+ * @outputs N/A
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */

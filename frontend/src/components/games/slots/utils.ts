@@ -1,6 +1,13 @@
 /**
  * @file utils.ts
- * @description Utility functions for slots game logic
+ * @description Slots game utility functions (symbol generation, win calculation, descriptions).
+ * @class N/A (utility functions)
+ * @module Components/Slots
+ * @inputs Reel symbol arrays, bet amount
+ * @outputs Random symbols, win amounts, descriptive strings
+ * @external_sources `Symbol`, `SYMBOL_WEIGHTS`, `PAYOUTS` from slots types
+ * @author Riley Meyerkorth
+ * @date 2025-10-26
  */
 
 import { Symbol, SYMBOL_WEIGHTS, PAYOUTS } from "./types";

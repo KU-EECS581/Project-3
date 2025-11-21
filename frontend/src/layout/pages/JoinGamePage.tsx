@@ -1,6 +1,11 @@
 /**
  * @file JoinGamePage.tsx
- * @description Page for joining a game.
+ * @description Page for configuring and initiating server connection.
+ * @class JoinGamePage
+ * @module Pages/Lobby
+ * @inputs host/port form events, server connection state
+ * @outputs Server request mutation, navigation on connect
+ * @external_sources React Router, GameServer/UserData hooks
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

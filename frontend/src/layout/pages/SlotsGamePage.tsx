@@ -1,6 +1,11 @@
 /**
  * @file SlotsGamePage.tsx
- * @description Page for the slots game with complete gameplay loop.
+ * @description Page wrapper for standalone slot machine game.
+ * @class SlotsGamePage
+ * @module Pages/Slots
+ * @inputs User data, bet interactions
+ * @outputs Balance mutations & win summaries
+ * @external_sources React Router, UserData hook
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

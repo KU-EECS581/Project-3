@@ -1,6 +1,11 @@
 /**
  * @file BoundingBox.ts
- * @description The model for bounding boxes used in collision detection.
+ * @description Axis-aligned bounding box model for collision detection.
+ * @class N/A
+ * @module Models/Geometry
+ * @inputs x, y, width, height numbers
+ * @outputs BoundingBox interface
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

@@ -1,6 +1,11 @@
 /**
  * @file MapDebugPanel.tsx
- * @description Debug panel for the game map.
+ * @description Debug overlay: mouse position & character state + disconnect.
+ * @class MapDebugPanel
+ * @module Components/Debug
+ * @inputs self player, mouse position, disconnect handler
+ * @outputs Panel UI with metrics/buttons
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-28
  */

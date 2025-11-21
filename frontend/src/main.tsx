@@ -1,6 +1,11 @@
 /**
  * @file main.tsx
  * @description Entry point for the React application.
+ * @class N/A
+ * @module Frontend Bootstrap
+ * @inputs N/A
+ * @outputs Root React render
+ * @external_sources React, ReactDOM
  * @author Riley Meyerkorth
  * @date 2025-10-24
  */
