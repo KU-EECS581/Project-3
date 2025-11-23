@@ -282,42 +282,38 @@ export class GameServer {
         let movement: MovementMessage | undefined;
         const maybeEnvelope = AnyGameMessageSchema.safeParse(parsed);
         if (!maybeEnvelope.success) {
-            console.log('[Server] Envelope parsing failed:', maybeEnvelope.error);
-            // Only try legacy movement if it looks like a movement message (has x, y fields)
+            console.log('[Server] Envelope parsing failed, attempting legacy movement parse:', maybeEnvelope.error);
+            // Attempt legacy movement parsing ONLY if it resembles a movement payload
             if (typeof parsed === 'object' && parsed !== null && 'x' in parsed && 'y' in parsed) {
-                const legacy = MovementMessageSchema.safeParse(parsed);
-                if (!legacy.success) {
-                    console.error('Invalid message format (neither envelope nor legacy movement):', legacy.error);
+                const legacyMovementResult = MovementMessageSchema.safeParse(parsed);
+                if (!legacyMovementResult.success) {
+                    console.error('Invalid message format (neither envelope nor valid legacy movement):', legacyMovementResult.error);
                     console.error('Received message:', JSON.stringify(parsed, null, 2));
                     return;
                 }
+                movement = legacyMovementResult.data;
+                this.tryBindUser(ws, movement.user);
+                // Remember last known position for this user
+                this.lastKnownPositions.set(movement.user.name, movement);
+                // Broadcast movement to all clients
+                const payload = JSON.stringify({
+                    key: GameMessageKey.MOVE,
+                    v: MESSAGE_VERSION,
+                    payload: movement,
+                    ts: Date.now(),
+                });
+                this.clients.forEach(client => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(payload);
+                    }
+                });
+                return;
             } else {
-                // Not a movement message, so envelope parsing should have worked
-                console.error('[Server] Invalid envelope format:', maybeEnvelope.error);
+                // Not a movement message; log and ignore
+                console.error('[Server] Invalid envelope format and not legacy movement:', maybeEnvelope.error);
                 console.error('[Server] Received message:', JSON.stringify(parsed, null, 2));
                 return;
             }
-            movement = legacy.data;
-            // Bind user if provided
-            this.tryBindUser(ws, movement.user);
-            // Handle legacy movement message
-            if (!movement) return;
-            // Remember last known position for this user
-            this.lastKnownPositions.set(movement.user.name, movement);
-            
-            // Broadcast movement to all connected clients (including sender)
-            const payload = JSON.stringify({
-                key: GameMessageKey.MOVE,
-                v: MESSAGE_VERSION,
-                payload: movement,
-                ts: Date.now(),
-            });
-            this.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(payload);
-                }
-            });
-            return;
         }
 
         // Process envelope message
