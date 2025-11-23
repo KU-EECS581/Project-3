@@ -1,6 +1,13 @@
 /**
  * @file PokerGameStateMessage.ts
- * @description Message containing poker table state for synchronization.
+ * @description Poker table state for synchronization.
+ * @class N/A
+ * @module Poker Models
+ * @inputs N/A
+ * @outputs TableState schema & type
+ * @external_sources zod (schema validation)
+ * @author Riley Meyerkorth
+ * @date 2025-10-28
  */
 import * as z from 'zod';
 import { CardSchema } from '../cards/Card';

@@ -1,6 +1,11 @@
 /**
  * @file GameWorldPage.tsx
- * @description Page for the game world.
+ * @description Live game world page embedding PlayableMap + debug tools.
+ * @class GameWorldPage
+ * @module Pages/Map
+ * @inputs Server player list, movement callbacks, debug toggle
+ * @outputs Map interactions (movement/entity enter) & disconnect
+ * @external_sources Hooks (character/gameWorld/connection), React
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */
@@ -27,7 +32,7 @@ export function GameWorldPage() {
   // Show connecting state
   // TODO: Better loading visualization or component
   if (server.isConnecting) {
-    return <h2>Connecting to {server.host}:{server.port}...</h2>;
+    return <h2>Connecting{server.host && server.port ? ` to ${server.host}:${server.port}` : ''}...</h2>;
   }
 
   // Show disconnecting state

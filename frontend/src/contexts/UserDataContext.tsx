@@ -1,6 +1,11 @@
 /**
- * @file UserDataContext.ts
- * @description Context for user data.
+ * @file UserDataContext.tsx
+ * @description React context for persistent user profile & balance management.
+ * @class UserDataContext
+ * @module Contexts/User
+ * @inputs N/A
+ * @outputs UserDataContext object
+ * @external_sources React
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

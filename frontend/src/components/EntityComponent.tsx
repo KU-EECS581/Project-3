@@ -1,6 +1,11 @@
 /**
  * @file EntityComponent.tsx
- * @description Component representing an entity on the map.
+ * @description Renders a static map entity (shop/game/etc) with optional sprite.
+ * @class EntityComponent
+ * @module Components/Map
+ * @inputs entity data, debug flag
+ * @outputs Positioned entity container + sprite or label
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-27
  */

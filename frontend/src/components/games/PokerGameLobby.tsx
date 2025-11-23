@@ -1,6 +1,11 @@
 /**
  * @file PokerGameLobby.tsx
- * @description Component for the poker game lobby.
+ * @description Poker lobby management (players list, settings, start button).
+ * @class PokerGameLobby
+ * @module Components/Poker
+ * @inputs settings, onSettingsChanged, onGameStarted
+ * @outputs Join/leave side effects, start game callback
+ * @external_sources React (hooks), GameServer context
  * @author Riley Meyerkorth
  * @date 2025-10-28
  */

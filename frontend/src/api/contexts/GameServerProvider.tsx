@@ -1,6 +1,11 @@
 /**
  * @file GameServerProvider.tsx
- * @description Context for game server connection.
+ * @description Provider component managing WebSocket lifecycle & game synchronization.
+ * @class GameServerProvider
+ * @module Contexts/Server
+ * @inputs React children
+ * @outputs Connection state & action handlers
+ * @external_sources WebSocket API, zod, React
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */
@@ -11,13 +16,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUserData } from "@/hooks/useUserData";
 import { DEFAULT_CHARACTER_X, DEFAULT_CHARACTER_Y, DEFAULT_HOST, DEFAULT_PORT, DEFAULT_USER } from "@/constants";
 import type { PlayerCharacter } from "@/models";
-import { AnyGameMessageSchema, MESSAGE_VERSION, type MovementMessage, MovementMessageSchema, type User, PokerLobbyStateSchema, TableStateSchema } from "~middleware/models";
+import { AnyGameMessageSchema, MESSAGE_VERSION, type MovementMessage, MovementMessageSchema, type User, UserSchema, PokerLobbyStateSchema, TableStateSchema, BlackjackLobbyStateSchema, BlackjackGameStateSchema } from "~middleware/models";
+import { z } from "zod";
 import { GameMessageKey } from "~middleware/enums";
 
 export function GameServerProvider({children}: {children: React.ReactNode}) {
+    // Start with no host/port to prevent auto-connecting on page load
     const [request, setRequest] = useState<ServerConnectionRequest>({
-        host: DEFAULT_HOST,
-        port: DEFAULT_PORT,
+        host: undefined,
+        port: undefined,
         user: DEFAULT_USER
     });
     const [error, setError] = useState<string | undefined>(undefined);
@@ -27,6 +34,14 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
     const [pokerPlayers, setPokerPlayers] = useState<User[]>([]);
     const [pokerInGame, setPokerInGame] = useState(false);
     const [pokerState, setPokerState] = useState<ReturnType<typeof TableStateSchema.parse> | undefined>(undefined);
+    const [blackjackLobbyState, setBlackjackLobbyState] = useState<ReturnType<typeof BlackjackLobbyStateSchema.parse> | undefined>(undefined);
+    const [blackjackGameState, setBlackjackGameState] = useState<ReturnType<typeof BlackjackGameStateSchema.parse> | undefined>(undefined);
+    
+    // Track connection attempt to prevent rapid reconnection loops
+    const connectionAttemptRef = useRef<string | null>(null);
+    const shouldAttemptConnectionRef = useRef(true);
+    // Track request changes to allow manual retry (using state so useMemo can depend on it)
+    const [connectionRetryKey, setConnectionRetryKey] = useState(0);
     
     // Keep a ref to the latest user without retriggering socket effect
     useEffect(() => {
@@ -47,17 +62,24 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
      * @returns True if the request is valid, false otherwise.
      */
     const isRequestValid = useCallback(() => {
+        // Don't connect until both host and port are explicitly set by user
+        if (!request.host || !request.port) {
+            // Silently return false - this is expected before user joins
+            return false;
+        }
+
         // Validate host
-        if (!request.host) {
-            console.error(`Invalid host: ${request.host}`);
+        if (request.host.trim() === '') {
+            console.error(`Invalid host: empty string`);
             setError('Invalid host');
             return false;
         }
 
-        // Validate port
-        if (isNaN(request.port) || request.port < MIN_PORT || request.port > MAX_PORT) {
-            console.error(`Invalid port: ${request.port}`);
-            setError('Invalid port');
+        // Validate port - parse as number and check range
+        const parsedPort = Number(request.port);
+        if (!Number.isFinite(parsedPort) || parsedPort <= 0 || parsedPort > MAX_PORT) {
+            console.error(`Invalid port: ${parsedPort} (must be between ${MIN_PORT} and ${MAX_PORT})`);
+            setError(`Invalid port: ${parsedPort}`);
             return false;
         }
 
@@ -72,20 +94,75 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         return true;
     }, [request]);
 
-    // Create the WebSocket instance when request changes (host/port/user)
+    // Wrapper for setRequest that allows manual retry by resetting connection attempt
+    const setRequestWithRetry = useCallback((updater: React.SetStateAction<ServerConnectionRequest>) => {
+        setRequest((prev) => {
+            const next = typeof updater === 'function' ? updater(prev) : updater;
+            // If host or port changed, increment counter to force WebSocket recreation
+            if (next.host !== prev.host || next.port !== prev.port) {
+                setConnectionRetryKey(prev => prev + 1);
+            }
+            return next;
+        });
+    }, []);
+
+    // Create the WebSocket instance when host/port changes (not when user changes)
+    // Only create if we should attempt connection and the connection target has actually changed
+    // IMPORTANT: Only connect when both host and port are explicitly set by the user
     const ws = useMemo(() => {
+        // Guard: Don't create WebSocket until user explicitly sets host and port
+        if (!request.host || !request.port) {
+            return undefined;
+        }
+
         if (!isRequestValid()) {
             return undefined;
         }
 
+        // Create a unique key for this connection attempt (only based on host:port, not user)
+        const connectionKey = `${request.host}:${request.port}`;
+        
+        // If connection key changed, reset the attempt flag to allow new connection
+        if (connectionAttemptRef.current !== connectionKey) {
+            shouldAttemptConnectionRef.current = true;
+        }
+        
+        // If we're already attempting this connection, don't create a new WebSocket
+        if (connectionAttemptRef.current === connectionKey && !shouldAttemptConnectionRef.current) {
+            return undefined;
+        }
+
+        // Mark that we're attempting this connection
+        connectionAttemptRef.current = connectionKey;
+        shouldAttemptConnectionRef.current = false;
+
         try {
-            return new WebSocket(`ws://${request.host}:${request.port}`);
+            // Debug: log raw values to check for hidden characters
+            console.log(`[WebSocket] Host raw:`, JSON.stringify(request.host), `Port raw:`, JSON.stringify(request.port));
+            
+            // Ensure port is a valid number
+            const parsedPort = Number(request.port);
+            if (!Number.isFinite(parsedPort) || parsedPort <= 0 || parsedPort > MAX_PORT) {
+                console.error(`[WebSocket] Invalid port after parsing: ${parsedPort}`);
+                setError(`Invalid port: ${parsedPort}`);
+                return undefined;
+            }
+            
+            // Trim host to remove any whitespace
+            const cleanHost = request.host.trim();
+            const url = `ws://${cleanHost}:${parsedPort}`;
+            console.log(`[WebSocket] Creating WebSocket connection to ${url}`);
+            return new WebSocket(url);
         } catch (err) {
             setError(`Failed to create WebSocket: ${err}`);
             console.error('Failed to create WebSocket:', err);
+            connectionAttemptRef.current = null;
+            shouldAttemptConnectionRef.current = true;
             return undefined;
         }
-    }, [request, isRequestValid]);
+        // Include connectionRetryKey to allow manual retry by calling setRequest again
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [request.host, request.port, connectionRetryKey, isRequestValid]);
 
     // Keep track of readyState in React state so renders update when it changes
     const [readyState, setReadyState] = useState<number | undefined>(ws?.readyState);
@@ -107,6 +184,20 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
 
         ws.close();
     }, [ws, readyState]);
+
+    // Disconnect from server when user data is cleared
+    useEffect(() => {
+        if (!profileUser && isConnected) {
+            console.log('[GameServer] User data cleared, disconnecting from server...');
+            // Get the current user from request before disconnecting (for backend identification)
+            const currentUser = request.user;
+            if (currentUser) {
+                console.log(`[GameServer] Disconnecting user: ${currentUser.name}`);
+            }
+            disconnect();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [profileUser, isConnected, disconnect, request.user]);
 
     /**
      * Sends a message through the WebSocket connection.
@@ -176,6 +267,7 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
         const handleOpen = () => {
             console.log('WebSocket connection established');
             setReadyState(ws.readyState);
+            setError(undefined); // Clear any previous errors on successful connection
 
             // Announce presence immediately so other clients see us without waiting for movement
             try {
@@ -228,6 +320,23 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
                         }
                         break;
                     }
+                    case GameMessageKey.DISCONNECT: {
+                        // Remove player from the map when they disconnect
+                        console.log('[Frontend] Received DISCONNECT message:', msg.payload);
+                        const payload = z.object({ user: UserSchema }).safeParse(msg.payload);
+                        if (payload.success) {
+                            const { user } = payload.data;
+                            console.log(`[Frontend] Player ${user.name} disconnected, removing from map`);
+                            setPlayers((prev) => {
+                                const filtered = prev.filter(p => p.user.name !== user.name);
+                                console.log(`[Frontend] Removed ${user.name}, ${prev.length} -> ${filtered.length} players`);
+                                return filtered;
+                            });
+                        } else {
+                            console.error('[Frontend] Failed to parse DISCONNECT payload:', payload.error);
+                        }
+                        break;
+                    }
                     case GameMessageKey.POKER_LOBBY_STATE: {
                         const state = PokerLobbyStateSchema.safeParse(msg.payload);
                         if (state.success) {
@@ -240,6 +349,30 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
                         const gs = TableStateSchema.safeParse(msg.payload);
                         if (gs.success) {
                             setPokerState(gs.data);
+                        }
+                        break;
+                    }
+                    case GameMessageKey.BLACKJACK_LOBBY_STATE: {
+                        console.log('[Frontend] Received BLACKJACK_LOBBY_STATE:', msg.payload);
+                        const state = BlackjackLobbyStateSchema.safeParse(msg.payload);
+                        if (state.success) {
+                            console.log('[Frontend] Parsed lobby state successfully:', state.data);
+                            console.log('[Frontend] Seats with occupants:', state.data.seats.filter(s => s.occupant).length);
+                            setBlackjackLobbyState(state.data);
+                        } else {
+                            console.error('[Frontend] Failed to parse BLACKJACK_LOBBY_STATE:', state.error);
+                        }
+                        break;
+                    }
+                    case GameMessageKey.BLACKJACK_GAME_STATE: {
+                        console.log('[Frontend] Received BLACKJACK_GAME_STATE:', msg.payload);
+                        const gs = BlackjackGameStateSchema.safeParse(msg.payload);
+                        if (gs.success) {
+                            console.log('[Frontend] Parsed game state successfully:', gs.data);
+                            console.log('[Frontend] Players with bets:', gs.data.players.filter(p => p.bet > 0).length);
+                            setBlackjackGameState(gs.data);
+                        } else {
+                            console.error('[Frontend] Failed to parse BLACKJACK_GAME_STATE:', gs.error);
                         }
                         break;
                     }
@@ -258,16 +391,29 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             if (!event.wasClean) {
                 console.error(`WebSocket closed unexpectedly: Code ${event.code}, Reason: ${event.reason ?? 'No reason provided'}`);
                 setError(`WebSocket closed unexpectedly: Code ${event.code}, Reason: ${event.reason ?? 'No reason provided'}`);
+            } else {
+                // Clear error on clean close
+                setError(undefined);
             }
 
             console.log('WebSocket connection closed');
             setReadyState(ws.readyState);
+            
+            // Reset connection attempt tracking on close
+            connectionAttemptRef.current = null;
+            shouldAttemptConnectionRef.current = true;
         };
 
         const handleError = (error: Event) => {
             console.error('WebSocket error:', error);
             // readyState may be CLOSING/CLOSED after errors
             setReadyState(ws.readyState);
+            
+            // Set error but don't spam connection attempts
+            const connectionKey = `${request.host}:${request.port}`;
+            if (connectionAttemptRef.current === connectionKey) {
+                setError(`Failed to connect to ${request.host}:${request.port}. Check that the server is running and accessible.`);
+            }
         };
 
         ws.addEventListener('open', handleOpen);
@@ -360,6 +506,103 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
     const pokerRaise = useCallback((amount: number) => pokerAction('RAISE', amount), [pokerAction]);
     const pokerFold = useCallback(() => pokerAction('FOLD'), [pokerAction]);
 
+    // Blackjack multiplayer helpers
+    const joinBlackjack = useCallback((seatId?: number) => {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !userRef.current) return;
+        const envelope = {
+            key: GameMessageKey.JOIN_BLACKJACK,
+            v: MESSAGE_VERSION,
+            payload: { user: userRef.current, seatId },
+            ts: Date.now(),
+        } as const;
+        ws.send(JSON.stringify(envelope));
+    }, [ws]);
+
+    const leaveBlackjack = useCallback(() => {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !userRef.current) return;
+        const envelope = {
+            key: GameMessageKey.LEAVE_BLACKJACK,
+            v: MESSAGE_VERSION,
+            payload: { user: userRef.current },
+            ts: Date.now(),
+        } as const;
+        ws.send(JSON.stringify(envelope));
+    }, [ws]);
+
+    const blackjackAction = useCallback((action: string, amount?: number, seatId?: number) => {
+        // Use isConnected boolean instead of checking ws.readyState directly
+        // This is more reliable as it uses the tracked readyState state
+        if (!isConnected || !ws) {
+            console.error('[Frontend] Cannot send blackjack action - WebSocket not ready');
+            console.error('[Frontend] isConnected:', isConnected, 'ws:', !!ws, 'readyState:', readyState, 'OPEN =', WebSocket.OPEN);
+            return;
+        }
+        const currentUser = userRef.current;
+        if (!currentUser) {
+            console.error('[Frontend] Cannot send blackjack action - user not set');
+            console.error('[Frontend] userRef.current:', currentUser);
+            console.error('[Frontend] request.user:', request.user);
+            return;
+        }
+        // Ensure user object has required fields
+        if (!currentUser.name) {
+            console.error('[Frontend] Cannot send blackjack action - user.name is missing');
+            console.error('[Frontend] currentUser:', currentUser);
+            return;
+        }
+        // Build user object with required fields for UserSchema
+        const userPayload: any = {
+            name: currentUser.name,
+            balance: currentUser.balance ?? 0,
+        };
+        
+        // Add date fields if they exist, otherwise use current date
+        if (currentUser.dateCreated) {
+            userPayload.dateCreated = currentUser.dateCreated instanceof Date 
+                ? currentUser.dateCreated.toISOString() 
+                : currentUser.dateCreated;
+        } else {
+            userPayload.dateCreated = new Date().toISOString();
+        }
+        
+        if (currentUser.dateUpdated) {
+            userPayload.dateUpdated = currentUser.dateUpdated instanceof Date 
+                ? currentUser.dateUpdated.toISOString() 
+                : currentUser.dateUpdated;
+        } else {
+            userPayload.dateUpdated = new Date().toISOString();
+        }
+        
+        // Build payload, only including defined values
+        const payload: any = {
+            user: userPayload,
+            action,
+        };
+        
+        if (amount !== undefined && amount !== null) {
+            payload.amount = amount;
+        }
+        
+        if (seatId !== undefined && seatId !== null) {
+            payload.seatId = seatId;
+        }
+        
+        const envelope = {
+            key: GameMessageKey.BLACKJACK_ACTION,
+            v: MESSAGE_VERSION,
+            payload,
+            ts: Date.now(),
+        };
+        
+        console.log('[Frontend] Sending blackjack action:', JSON.stringify(envelope, null, 2));
+        // Double-check ws is available before sending
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(envelope));
+        } else {
+            console.error('[Frontend] WebSocket not ready when trying to send blackjack action');
+        }
+    }, [ws, request.user, isConnected, readyState]);
+
     // Implementation of the GameServerProvider
     return (
         <GameServerContext.Provider value={{
@@ -372,7 +615,7 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             receivedMessages,
             players,
             addPlayer,
-            setRequest,
+            setRequest: setRequestWithRetry,
             disconnect,
             host: request.host,
             port: request.port,
@@ -389,6 +632,11 @@ export function GameServerProvider({children}: {children: React.ReactNode}) {
             pokerBet,
             pokerRaise,
             pokerFold,
+            blackjackLobbyState,
+            blackjackGameState,
+            joinBlackjack,
+            leaveBlackjack,
+            blackjackAction,
         }}>
             {children}
         </GameServerContext.Provider>

@@ -1,6 +1,12 @@
 /**
  * @file deck.ts
- * @description Utilities for creating and managing decks of cards.
+ * @description Utilities for creating and managing standard playing card decks.
+ * @class N/A
+ * @module Utils/Cards
+ * @inputs CardSuit, CardRank enums
+ * @outputs Card arrays (deck operations)
+ * @external_sources N/A
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 

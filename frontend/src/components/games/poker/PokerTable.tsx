@@ -1,6 +1,13 @@
 /**
  * @file PokerTable.tsx
- * @description Server-synced Poker table UI.
+ * @description Real-time server-synced poker table (community, seats, actions).
+ * @class PokerTable
+ * @module Components/Poker
+ * @inputs GameServer state, user data context
+ * @outputs Betting controls, card visibility logic
+ * @external_sources React hooks, GameServer context
+ * @author Riley Meyerkorth
+ * @date 2025-11-20
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useUserData } from '@/hooks/useUserData';

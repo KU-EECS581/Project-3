@@ -1,6 +1,11 @@
 /**
  * @file MapEntityKey.ts
- * @description Enum for map entity keys.
+ * @description Enum for map entity key identifiers.
+ * @class N/A
+ * @module Enums/Map
+ * @inputs N/A
+ * @outputs MapEntityKey constant & type
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */

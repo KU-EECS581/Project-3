@@ -1,6 +1,11 @@
 /**
  * @file UserMessage.ts
- * @description Represents a message for passing a user.
+ * @description Message carrying a user payload.
+ * @class N/A
+ * @module User Messages
+ * @inputs User identity
+ * @outputs Serialized user message schema & type
+ * @external_sources zod (schema validation)
  * @author Riley Meyerkorth
  * @date 2025-10-28
  */

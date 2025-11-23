@@ -1,6 +1,11 @@
 /**
  * @file GameServerContext.tsx
- * @description Context for game server connection.
+ * @description React context describing game server connection & game states.
+ * @class GameServerContext
+ * @module Contexts/Server
+ * @inputs N/A
+ * @outputs GameServerContext object
+ * @external_sources WebSocket API, React
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */
@@ -8,7 +13,7 @@
 import type { ServerConnectionRequest } from "@/api";
 import type { PlayerCharacter } from "@/models";
 import { createContext } from "react";
-import type { MovementMessage, User, PokerGameStateMessage } from "~middleware/models";
+import type { MovementMessage, User, PokerGameStateMessage, BlackjackLobbyState, BlackjackGameStateMessage } from "~middleware/models";
 
 export interface GameServerContextProps {
     isConnecting: boolean;
@@ -22,8 +27,8 @@ export interface GameServerContextProps {
     addPlayer: (player: PlayerCharacter) => void;
     setRequest: React.Dispatch<React.SetStateAction<ServerConnectionRequest>>;
     disconnect: () => void;
-    host: string;
-    port: number;
+    host: string | undefined;
+    port: number | undefined;
     error: string | undefined;
     pokerPlayers: User[];
     pokerInGame: boolean;
@@ -37,6 +42,12 @@ export interface GameServerContextProps {
     pokerBet: (amount: number) => void;
     pokerRaise: (amount: number) => void;
     pokerFold: () => void;
+    // Blackjack multiplayer
+    blackjackLobbyState?: BlackjackLobbyState;
+    blackjackGameState?: BlackjackGameStateMessage;
+    joinBlackjack: (seatId?: number) => void;
+    leaveBlackjack: () => void;
+    blackjackAction: (action: string, amount?: number, seatId?: number) => void;
 }
 
 export const GameServerContext = createContext<GameServerContextProps | undefined>(undefined);

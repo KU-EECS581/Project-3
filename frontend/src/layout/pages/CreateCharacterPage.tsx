@@ -1,6 +1,11 @@
 /**
  * @file CreateCharacterPage.tsx
- * @description Page for creating a new character.
+ * @description Player profile creation page.
+ * @class CreateCharacterPage
+ * @module Pages/Player
+ * @inputs onCreatePlayer form submission
+ * @outputs User saved to storage + route navigation
+ * @external_sources React Router, UserData hook
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

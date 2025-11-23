@@ -1,6 +1,11 @@
 /**
  * @file PlayerEntityComponent.tsx
- * @description Component representing a player entity.
+ * @description Visual map entity for a player with optional debug overlay.
+ * @class PlayerEntityComponent
+ * @module Components/Map
+ * @inputs player model, animatedPos, sizing, debug flag
+ * @outputs Positioned <div/> representing player
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-27
  */

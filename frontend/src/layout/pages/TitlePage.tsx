@@ -1,9 +1,12 @@
 /**
  * @file TitlePage.tsx
- * @description Enhanced title screen with Casino Cavern styling.
- * @author
- *  Riley Meyerkorth (base structure)
- *  Ty Farrington (visual design)
+ * @description Landing screen (create player / join game entry point).
+ * @class TitlePage
+ * @module Pages/Home
+ * @inputs User existence state, navigation
+ * @outputs Navigation to create/join routes, reset action
+ * @external_sources React Router, UserData hook
+ * @author Riley Meyerkorth; Visual Design: Ty Farrington
  * @date 2025-10-26
  */
 

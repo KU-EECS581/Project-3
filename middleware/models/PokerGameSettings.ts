@@ -1,6 +1,11 @@
 /**
  * @file PokerGameSettings.ts
- * @description Represents the settings for the poker game.
+ * @description Settings for poker game configuration.
+ * @class N/A
+ * @module Poker Models
+ * @inputs N/A
+ * @outputs Interface for settings
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-28
  */

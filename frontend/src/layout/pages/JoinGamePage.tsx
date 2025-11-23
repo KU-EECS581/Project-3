@@ -1,6 +1,11 @@
 /**
  * @file JoinGamePage.tsx
- * @description Page for joining a game.
+ * @description Page for configuring and initiating server connection.
+ * @class JoinGamePage
+ * @module Pages/Lobby
+ * @inputs host/port form events, server connection state
+ * @outputs Server request mutation, navigation on connect
+ * @external_sources React Router, GameServer/UserData hooks
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */
@@ -19,11 +24,17 @@ export function JoinGamePage() {
     const navigate = useNavigate();
 
     const handleJoinGame = useCallback((host: string, port: number) => {
+        // Parse port as number, fallback to default if invalid
+        const parsedPort = Number(port);
+        const validPort = Number.isFinite(parsedPort) && parsedPort > 0 && parsedPort <= 65535 
+            ? parsedPort 
+            : 51337; // DEFAULT_PORT
+        
         server.setRequest(
         (prev) => ({
             ...prev,
-            host,
-            port: Number(port),
+            host: host.trim(), // Trim whitespace from host
+            port: validPort,
             // Bind the connection user to the created user if available
             user: userData.user ?? prev.user,
         }));
@@ -59,7 +70,7 @@ export function JoinGamePage() {
                 disabled={server.isConnecting}
                 onJoinGame={handleJoinGame}
                 />
-            {server.isConnecting && <h2>Connecting to {server.host}:{server.port}...</h2>}
+            {server.isConnecting && server.host && server.port && <h2>Connecting to {server.host}:{server.port}...</h2>}
             {server.error && <h3 style={{ color: 'red' }}>Error: {server.error}</h3>}
         </>
     );

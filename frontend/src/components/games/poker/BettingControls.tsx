@@ -1,3 +1,14 @@
+/**
+ * @file BettingControls.tsx
+ * @description Poker betting control panel (check/call/bet/raise/fold).
+ * @class BettingControls
+ * @module Components/Poker
+ * @inputs toCall, minBet, maxBet, canCheck, callbacks (onCheck/onCall/onBetOrRaise/onFold)
+ * @outputs Emits selected bet/raise amount through handler
+ * @external_sources React hooks
+ * @author Riley Meyerkorth
+ * @date 2025-11-20
+ */
 import { useMemo, useState } from 'react';
 
 interface BettingControlsProps {

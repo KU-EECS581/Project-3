@@ -1,10 +1,16 @@
 /**
  * @file BlackjackHand.tsx
- * @description Component for displaying a blackjack hand with animated cards.
+ * @description Animated blackjack hand rendering + staged dealing.
+ * @class BlackjackHand
+ * @module Components/Blackjack
+ * @inputs cards, hideFirstCard, position, size config, deckPosition
+ * @outputs Animated card elements positioned dynamically
+ * @external_sources React (hooks)
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { AnimatedCard } from "./AnimatedCard";
 import type { Card } from "@/models";
 
@@ -16,6 +22,7 @@ interface BlackjackHandProps {
     cardHeight?: number;
     label?: string;
     deckPosition?: { x: number; y: number }; // Optional deck position for animations
+    keyPrefix?: string; // Optional prefix for unique keys (e.g., player name or seat ID)
 }
 
 /**
@@ -44,6 +51,7 @@ export function BlackjackHand({
     cardHeight = 168,
     label,
     deckPosition,
+    keyPrefix = '',
 }: BlackjackHandProps) {
     const [renderedCards, setRenderedCards] = useState<Array<{ card: Card; id: string; completed: boolean }>>([]);
     const defaultDeckPosition = deckPosition || { 
@@ -51,21 +59,53 @@ export function BlackjackHand({
         y: typeof window !== 'undefined' ? window.innerHeight - 250 : 100 
     };
     const animationCompleteCount = useRef(0);
+    const lastCardsSignatureRef = useRef<string>('');
+    
+    // Create a stable signature for the cards array
+    const cardsSignature = useMemo(() => 
+        cards.map(c => `${c.suit}-${c.rank}`).join(','), 
+        [cards]
+    );
 
     useEffect(() => {
-        // When cards change, add new ones that need animation
+        
+        // If cards have changed significantly (different cards, not just more), reset
+        if (cards.length === 0) {
+            setRenderedCards([]);
+            lastCardsSignatureRef.current = '';
+            return;
+        }
+        
+        // Check if this is a completely new hand (different cards, not just more cards added)
+        const currentSignature = cardsSignature;
+        const isNewHand = currentSignature !== lastCardsSignatureRef.current && 
+            (cards.length < renderedCards.length || 
+             cards.length === renderedCards.length ||
+             lastCardsSignatureRef.current === '');
+        
+        if (isNewHand) {
+            setRenderedCards([]);
+            lastCardsSignatureRef.current = '';
+        }
+        
+        // Add new cards that need animation
+        // Only add cards that are new (not already rendered)
         if (cards.length > renderedCards.length) {
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2, 9);
+            const uniqueId = `${keyPrefix ? keyPrefix + '-' : ''}${timestamp}-${random}`;
             const newCards = cards.slice(renderedCards.length).map((card, idx) => ({
                 card,
-                id: `${card.suit}-${card.rank}-${Date.now()}-${idx}`,
+                id: `${uniqueId}-${card.suit}-${card.rank}-${renderedCards.length + idx}`,
                 completed: false,
             }));
-            setRenderedCards((prev) => [...prev, ...newCards]);
-        } else if (cards.length < renderedCards.length) {
-            // Cards removed, reset
-            setRenderedCards([]);
+            setRenderedCards((prev) => {
+                const updated = [...prev, ...newCards];
+                lastCardsSignatureRef.current = updated.map(c => `${c.card.suit}-${c.card.rank}`).join(',');
+                return updated;
+            });
         }
-    }, [cards, renderedCards.length]);
+    }, [cards, cardsSignature, keyPrefix, renderedCards.length]);
 
     const handleCardAnimationComplete = (cardId: string) => {
         setRenderedCards((prev) =>

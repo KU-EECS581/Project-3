@@ -1,3 +1,14 @@
+/**
+ * @file types.ts
+ * @description Type declarations for multiplayer blackjack game seats and state.
+ * @class N/A (types)
+ * @module Components/Blackjack
+ * @inputs N/A
+ * @outputs Exported interfaces & type unions (BJSeat, BlackjackGameState, etc.)
+ * @external_sources Middleware card types
+ * @author Riley Meyerkorth
+ * @date 2025-10-26
+ */
 import type { Card } from "~middleware/cards";
 
 export type BJSeatId = 0 | 1 | 2 | 3 | 4;

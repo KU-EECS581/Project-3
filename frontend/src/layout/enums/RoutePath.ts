@@ -1,6 +1,11 @@
 /**
  * @file RoutePath.ts
- * @description An enum containing route paths for the application to reduce hardcoding.
+ * @description Centralized application route path constants to avoid hardcoding.
+ * @class N/A (constant object)
+ * @module Layout/Enums
+ * @inputs N/A
+ * @outputs `RoutePath` object and `RoutePathType` union type
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

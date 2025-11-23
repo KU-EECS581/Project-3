@@ -1,9 +1,16 @@
 /**
  * @file Card.tsx
  * @description Component that renders a playing card as an SVG.
+ * @class Card (React Component)
+ * @module Components/Cards
+ * @inputs Card props (card, faceDown, width, height, className)
+ * @outputs SVG-rendered playing card element
+ * @external_sources React
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 
+import React from "react";
 import type { Card as CardModel } from "@/models";
 import { CardSuit, CardRank } from "@/enums";
 import type { CardSuitType, CardRankType } from "@/enums";
@@ -61,11 +68,12 @@ function getRankText(rank: CardRankType): string {
 /**
  * Renders a card face-down (back of card)
  */
-function renderCardBack(width: number, height: number): JSX.Element {
+function renderCardBack(width: number, height: number): React.ReactElement {
     const cornerRadius = width * 0.08;
+    const viewBoxPadding = 2; // Add small padding to prevent clipping
     
     return (
-        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+        <svg width={width} height={height} viewBox={`-${viewBoxPadding} -${viewBoxPadding} ${width + viewBoxPadding * 2} ${height + viewBoxPadding * 2}`} style={{ display: 'block' }}>
             <defs>
                 <linearGradient id="cardBackGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#1a237e" />
@@ -115,19 +123,19 @@ function renderCardBack(width: number, height: number): JSX.Element {
 /**
  * Renders a card face-up
  */
-function renderCardFace(card: CardModel, width: number, height: number): JSX.Element {
+function renderCardFace(card: CardModel, width: number, height: number): React.ReactElement {
     const cornerRadius = width * 0.08;
     const padding = width * 0.1;
     const suitSize = width * 0.12;
     const rankSize = width * 0.18;
+    const viewBoxPadding = 2; // Add small padding to prevent clipping
     
     const suitSymbol = getSuitSymbol(card.suit);
     const suitColor = getSuitColor(card.suit);
     const rankText = getRankText(card.rank);
-    const isRed = suitColor === '#dc2626';
     
     return (
-        <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+        <svg width={width} height={height} viewBox={`-${viewBoxPadding} -${viewBoxPadding} ${width + viewBoxPadding * 2} ${height + viewBoxPadding * 2}`} style={{ display: 'block' }}>
             <defs>
                 <linearGradient id="cardFrontGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#ffffff" />
@@ -170,29 +178,31 @@ function renderCardFace(card: CardModel, width: number, height: number): JSX.Ele
                 {suitSymbol}
             </text>
             
-            {/* Bottom-right rank (upside down) */}
+            {/* Bottom-right rank (upside down) - match top-left padding visually */}
             <text
-                x={width - padding}
+                x={width - padding - 4}
                 y={height - padding - suitSize}
                 fontSize={rankSize}
                 fill={suitColor}
                 fontFamily="Arial, sans-serif"
                 fontWeight="bold"
                 textAnchor="end"
-                transform={`rotate(180 ${width - padding} ${height - padding - suitSize})`}
+                dominantBaseline="hanging"
+                transform={`rotate(180 ${width - padding - 4} ${height - padding - suitSize})`}
             >
                 {rankText}
             </text>
             
-            {/* Bottom-right suit (upside down) */}
+            {/* Bottom-right suit (upside down) - match top-left padding visually */}
             <text
-                x={width - padding}
+                x={width - padding - 4}
                 y={height - padding}
                 fontSize={suitSize}
                 fill={suitColor}
                 fontFamily="serif"
                 textAnchor="end"
-                transform={`rotate(180 ${width - padding} ${height - padding})`}
+                dominantBaseline="hanging"
+                transform={`rotate(180 ${width - padding - 4} ${height - padding})`}
             >
                 {suitSymbol}
             </text>
@@ -228,7 +238,16 @@ function renderCardFace(card: CardModel, width: number, height: number): JSX.Ele
 
 export function Card({ card, faceDown = false, width = 100, height = 140, className }: CardProps) {
     return (
-        <span className={className} style={{ display: 'inline-block', lineHeight: 0 }}>
+        <span 
+            className={className} 
+            style={{ 
+                display: 'inline-block', 
+                lineHeight: 0,
+                verticalAlign: 'middle',
+                textAlign: 'center',
+                overflow: 'visible'
+            }}
+        >
             {faceDown || !card
                 ? renderCardBack(width, height)
                 : renderCardFace(card, width, height)

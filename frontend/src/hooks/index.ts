@@ -1,6 +1,11 @@
 /**
  * @file index.ts
- * @description Barrel file for custom hooks.
+ * @description Barrel file aggregating custom hooks.
+ * @class N/A
+ * @module Hooks
+ * @inputs N/A
+ * @outputs Re-exported hook modules
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */

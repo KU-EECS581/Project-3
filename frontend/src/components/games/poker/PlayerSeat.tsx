@@ -1,6 +1,11 @@
 /**
  * @file PlayerSeat.tsx
- * @description Component representing a player's seat in a poker game.
+ * @description Individual poker seat panel (name, chips, hole cards).
+ * @class PlayerSeat
+ * @module Components/Poker
+ * @inputs player state, isMe flag, isTurn flag
+ * @outputs Seat UI with conditional card reveal
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-28
  */

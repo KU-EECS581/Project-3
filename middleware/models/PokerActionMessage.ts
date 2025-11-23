@@ -1,6 +1,13 @@
 /**
  * @file PokerActionMessage.ts
  * @description Message for poker game actions from a client.
+ * @class N/A
+ * @module Poker Messages
+ * @inputs User, action type, optional amount
+ * @outputs Serialized poker action message schema & type
+ * @external_sources zod (schema validation)
+ * @author Riley Meyerkorth
+ * @date 2025-10-28
  */
 import * as z from 'zod';
 import { UserSchema } from './User';

@@ -1,6 +1,11 @@
 /**
  * @file MapEntity.ts
- * @description The model for entities on the map, including shops, games, etc.
+ * @description Map entity model (shops, games, exits) with position & size.
+ * @class N/A
+ * @module Models/Map
+ * @inputs Key/type, position, size, optional route/sprite
+ * @outputs MapEntity interface & related types
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

@@ -1,3 +1,14 @@
+/**
+ * @file CardView.tsx
+ * @description Lightweight poker card & back presentation components.
+ * @class CardView / CardBack
+ * @module Components/Poker
+ * @inputs card suit/rank, size
+ * @outputs Styled card/back JSX
+ * @external_sources Middleware card utilities
+ * @author Riley Meyerkorth
+ * @date 2025-11-20
+ */
 import { type Rank, type Suit, isRedSuit, rankToDisplay, suitToSymbol } from '~middleware/cards';
 
 type SimpleCard = { suit: Suit; rank: Rank };

@@ -1,6 +1,12 @@
 /**
  * @file Card.ts
- * @description Model for a playing card.
+ * @description Playing card model + value helpers.
+ * @class N/A
+ * @module Models/Cards
+ * @inputs Suit & rank types
+ * @outputs Card interface & helper functions
+ * @external_sources N/A
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 

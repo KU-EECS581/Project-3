@@ -1,6 +1,13 @@
 /**
  * @file SlotMachine.tsx
- * @description Slot machine game component with spinning reels
+ * @description Single-slot game component with weighted reels & payouts.
+ * @class SlotMachine
+ * @module Components/Slots
+ * @inputs bet amount, spin trigger, onSpinComplete
+ * @outputs Balance mutations, win state display
+ * @external_sources React (hooks), UserDataContext
+ * @author Riley Meyerkorth
+ * @date 2025-11-20
  */
 
 import { useCallback, useMemo, useState, useContext } from "react";

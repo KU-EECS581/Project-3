@@ -1,6 +1,11 @@
 /**
  * @file App.tsx
- * @description Main application component.
+ * @description Application root: providers + routing configuration.
+ * @class App
+ * @module Layout
+ * @inputs None (wraps global providers & routes)
+ * @outputs Route tree rendering per URL
+ * @external_sources React Router, Context Providers
  * @author Riley Meyerkorth
  * @date 2025-10-24
  */

@@ -1,6 +1,12 @@
 /**
  * @file poker.ts
- * @description Utilities for poker hand evaluation and gameplay.
+ * @description Utilities for poker hand evaluation and comparison.
+ * @class N/A
+ * @module Utils/Poker
+ * @inputs Card arrays (player & community)
+ * @outputs EvaluatedHand objects & comparison results
+ * @external_sources N/A
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 

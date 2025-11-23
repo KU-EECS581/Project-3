@@ -1,6 +1,12 @@
 /**
  * @file PokerHand.tsx
- * @description Component for displaying a poker hand with animated cards.
+ * @description Animated poker hand reveal + dealing UI.
+ * @class PokerHand
+ * @module Components/Poker
+ * @inputs cards, position, visibility flag, sizing props
+ * @outputs Animated card elements (face up/down)
+ * @external_sources React (hooks)
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 

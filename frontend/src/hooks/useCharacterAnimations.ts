@@ -1,6 +1,11 @@
 /**
  * @file useCharacterAnimations.ts
- * @description Custom hook for managing character animations on the playable map.
+ * @description Hook for tracking and animating player character positions.
+ * @class useCharacterAnimations
+ * @module Hooks/Character
+ * @inputs PlayerCharacter array
+ * @outputs Map of animated positions
+ * @external_sources React
  * @author Riley Meyerkorth
  * @date 2025-10-27
  */

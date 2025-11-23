@@ -1,6 +1,12 @@
 /**
  * @file AnimatedCard.tsx
- * @description Component that animates a card from one position to another.
+ * @description Imperative animation wrapper moving a playing card from deck to target.
+ * @class AnimatedCard
+ * @module Components/Cards
+ * @inputs card model, start/end coords, timing (duration/delay), faceDown
+ * @outputs Animated positioned Card component
+ * @external_sources React (hooks)
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 
@@ -26,6 +32,7 @@ interface AnimatedCardProps {
 
 /**
  * AnimatedCard component that smoothly moves a card from start to end position
+ * Optimized for performance using direct DOM manipulation during animation
  */
 export function AnimatedCard({
     card,
@@ -38,33 +45,40 @@ export function AnimatedCard({
     endX = 0,
     endY = 0,
     onAnimationComplete,
-    duration = 800,
+    duration = 400,
     delay = 0,
     cardId,
 }: AnimatedCardProps) {
-    const [position, setPosition] = useState({ x: startX ?? endX, y: startY ?? endY });
-    const [isAnimating, setIsAnimating] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
     const animationRef = useRef<number>();
     const timeoutRef = useRef<number>();
-    const hasAnimatedRef = useRef<string | null>(null); // Track which cardId has animated
-    const finalPositionRef = useRef<{ x: number; y: number } | null>(null); // Lock final position
+    const hasAnimatedRef = useRef<string | null>(null);
+    const finalPositionRef = useRef<{ x: number; y: number } | null>(null);
+    const isAnimatingRef = useRef(false);
 
     useEffect(() => {
-        // CRITICAL: If this card has already animated, stay at final position and ignore all prop changes
+        const container = containerRef.current;
+        if (!container) return;
+
+        // CRITICAL: If this card has already animated, stay at final position
         if (hasAnimatedRef.current === cardId && finalPositionRef.current) {
-            setPosition(finalPositionRef.current);
-            return; // Don't re-animate, ever
+            const pos = finalPositionRef.current;
+            container.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+            container.style.willChange = 'auto';
+            container.style.zIndex = '1';
+            return;
         }
 
         // If cardId is null/undefined but we have a final position, use it
         if (!cardId && finalPositionRef.current) {
-            setPosition(finalPositionRef.current);
+            const pos = finalPositionRef.current;
+            container.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
             return;
         }
 
-        // If no start position, just render at end position (already placed card)
+        // If no start position, just render at end position
         if (startX === undefined && startY === undefined) {
-            setPosition({ x: endX, y: endY });
+            container.style.transform = `translate(${endX}px, ${endY}px)`;
             finalPositionRef.current = { x: endX, y: endY };
             hasAnimatedRef.current = cardId || null;
             return;
@@ -73,38 +87,41 @@ export function AnimatedCard({
         // Set initial position
         const startPosX = startX ?? endX;
         const startPosY = startY ?? endY;
-        setPosition({ 
-            x: startPosX, 
-            y: startPosY 
-        });
+        container.style.transform = `translate(${startPosX}px, ${startPosY}px)`;
+        container.style.willChange = 'transform';
+        container.style.zIndex = '1000';
 
         // Delay before animation starts
         timeoutRef.current = window.setTimeout(() => {
-            setIsAnimating(true);
+            isAnimatingRef.current = true;
             const startTime = performance.now();
 
             const animate = (currentTime: number) => {
+                if (!container) return;
+                
                 const elapsed = currentTime - startTime;
                 const progress = Math.min(elapsed / duration, 1);
 
                 // Easing function (ease-out cubic)
                 const eased = 1 - Math.pow(1 - progress, 3);
 
-                const newPos = {
-                    x: startPosX + (endX - startPosX) * eased,
-                    y: startPosY + (endY - startPosY) * eased,
-                };
+                const newX = startPosX + (endX - startPosX) * eased;
+                const newY = startPosY + (endY - startPosY) * eased;
 
-                setPosition(newPos);
+                // Direct DOM manipulation - no React re-renders!
+                container.style.transform = `translate(${newX}px, ${newY}px)`;
 
                 if (progress < 1) {
                     animationRef.current = requestAnimationFrame(animate);
                 } else {
-                    // Animation complete - lock position
-                    setIsAnimating(false);
+                    // Animation complete
+                    isAnimatingRef.current = false;
                     finalPositionRef.current = { x: endX, y: endY };
                     hasAnimatedRef.current = cardId || null;
-                    setPosition({ x: endX, y: endY }); // Ensure exact final position
+                    container.style.transform = `translate(${endX}px, ${endY}px)`;
+                    container.style.willChange = 'auto';
+                    container.style.zIndex = '1';
+                    
                     if (onAnimationComplete) {
                         onAnimationComplete();
                     }
@@ -121,19 +138,26 @@ export function AnimatedCard({
             if (timeoutRef.current) {
                 clearTimeout(timeoutRef.current);
             }
+            isAnimatingRef.current = false;
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [cardId]); // ONLY re-animate if cardId changes (new card). Ignore position changes for already-animated cards.
+    }, [cardId]); // ONLY re-animate if cardId changes
+
+    // Initial position for first render
+    const initialX = startX ?? endX;
+    const initialY = startY ?? endY;
 
     return (
         <div
+            ref={containerRef}
             className={className}
             style={{
                 position: 'absolute',
-                left: `${position.x}px`,
-                top: `${position.y}px`,
-                transition: isAnimating ? 'none' : 'transform 0.2s ease-out',
-                zIndex: isAnimating ? 1000 : 1,
+                left: 0,
+                top: 0,
+                transform: `translate(${initialX}px, ${initialY}px)`,
+                willChange: 'transform',
+                zIndex: 1000,
             }}
         >
             <Card card={card} faceDown={faceDown} width={width} height={height} />

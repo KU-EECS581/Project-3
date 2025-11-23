@@ -1,6 +1,11 @@
 /**
  * @file PokerGame.tsx
- * @description Component for the poker game.
+ * @description Container orchestrating lobby vs in-game poker table state.
+ * @class PokerGame
+ * @module Components/Poker
+ * @inputs callbacks (onGameStarted/onGameEnded)
+ * @outputs PokerGameLobby or PokerTable UI
+ * @external_sources React hooks, GameServer context
  * @author Riley Meyerkorth
  * @date 2025-10-28
  */

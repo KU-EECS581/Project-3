@@ -1,6 +1,11 @@
 /**
  * @file PokerGamePage.tsx
- * @description Page for the poker game.
+ * @description Page wrapper hosting PokerGame component.
+ * @class PokerGamePage
+ * @module Pages/Poker
+ * @inputs Navigation, connection status
+ * @outputs PokerGame UI + back navigation
+ * @external_sources React Router, connection hook
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

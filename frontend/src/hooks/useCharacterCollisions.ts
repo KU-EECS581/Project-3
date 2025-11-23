@@ -1,6 +1,11 @@
 /**
  * @file useCharacterCollisions.ts
- * @description Custom hook for managing character collisions on the playable map.
+ * @description Hook detecting player collisions with map entities (enter/exit events).
+ * @class useCharacterCollisions
+ * @module Hooks/Character
+ * @inputs Player bounding box, entity list
+ * @outputs Collision helpers & event triggers
+ * @external_sources React
  * @author Riley Meyerkorth
  * @date 2025-10-27
  */
@@ -20,6 +25,8 @@ export function useCharacterCollisions({ entities, onEnterEntity, onExitEntity }
 
     // Track which entities we're currently inside to avoid re-firing events (ref avoids rerenders)
     const activeEntityNamesRef = useRef<Set<string>>(new Set());
+    // Track if we've already processed entities when returning to map (to prevent infinite re-entry)
+    const hasProcessedInitialEntitiesRef = useRef<boolean>(false);
     
     // Axis-aligned bounding box intersection
     const intersects = useCallback((a: BoundingBox, b: BoundingBox) =>
@@ -35,7 +42,10 @@ export function useCharacterCollisions({ entities, onEnterEntity, onExitEntity }
                     if (e) onExitEntity(e);
                 }
             }
-            if (active.size > 0) activeEntityNamesRef.current = new Set();
+            if (active.size > 0) {
+                activeEntityNamesRef.current = new Set();
+                hasProcessedInitialEntitiesRef.current = false; // Reset when bounding box is cleared
+            }
             return;
         }
 
@@ -67,13 +77,28 @@ export function useCharacterCollisions({ entities, onEnterEntity, onExitEntity }
             }
         }
 
-        // Fire callbacks
+        // Special handling: If we're returning to the map and already inside entities,
+        // silently add them to active set WITHOUT triggering entry callbacks
+        // This prevents infinite re-entry when clicking "Back to Map"
+        if (!hasProcessedInitialEntitiesRef.current && current.size > 0 && active.size === 0) {
+            // We're on the map for the first time (or returning) and already inside entities
+            // Silently add them to active set without triggering callbacks
+            console.log('[Collision] Player returned to map already inside entities, silently adding to active set:', Array.from(current));
+            activeEntityNamesRef.current = new Set(current);
+            hasProcessedInitialEntitiesRef.current = true;
+            return; // Don't fire any callbacks
+        }
+
+        // Fire callbacks only for actual enters/exits (not when silently initializing)
         if (enters.length && onEnterEntity) enters.forEach(onEnterEntity);
         if (exits.length && onExitEntity) exits.forEach(onExitEntity);
 
         // Update active set if changed
         const changed = enters.length > 0 || exits.length > 0;
-        if (changed) activeEntityNamesRef.current = current;
+        if (changed) {
+            activeEntityNamesRef.current = current;
+            hasProcessedInitialEntitiesRef.current = true;
+        }
     }, [intersects, boundingBox, entities, onEnterEntity, onExitEntity]);
 
     return {

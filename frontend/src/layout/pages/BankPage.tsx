@@ -1,6 +1,11 @@
 /**
  * @file BankPage.tsx
- * @description Page for the bank.
+ * @description Bank utility page for crediting player funds.
+ * @class BankPage
+ * @module Pages/Map
+ * @inputs UserData context, navigation
+ * @outputs Balance mutation (add funds), navigation back
+ * @external_sources React Router, UserData hook
  * @author Riley Meyerkorth
  * @date 2025-10-26
  */

@@ -1,6 +1,12 @@
 /**
  * @file DeckContext.tsx
- * @description Context for managing a shared deck of cards.
+ * @description React context for shared deck state & operations.
+ * @class DeckContext
+ * @module Contexts/Deck
+ * @inputs N/A
+ * @outputs DeckContext object
+ * @external_sources React
+ * @author Riley Meyerkorth
  * @date 2025-01-XX
  */
 

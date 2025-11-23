@@ -1,6 +1,11 @@
 /**
  * @file CreatePlayerForm.tsx
- * @description Form for creating a new player.
+ * @description Simple controlled form to create a player profile.
+ * @class CreatePlayerForm
+ * @module Components/Player
+ * @inputs onCreatePlayer callback, form input playerName
+ * @outputs invokes onCreatePlayer(name)
+ * @external_sources React (useCallback)
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */

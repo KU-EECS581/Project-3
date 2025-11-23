@@ -1,6 +1,11 @@
 /**
  * @file constants.ts
- * @description Barrel file for constants.
+ * @description Frontend constants (map entities, defaults, user placeholders).
+ * @class N/A
+ * @module Frontend Constants
+ * @inputs N/A
+ * @outputs Exported constant values & arrays
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */
@@ -12,7 +17,7 @@ import { RoutePath } from "./layout/enums";
 
 export const USER_DATA_KEY = "userData";
 export const DEFAULT_HOST = "localhost";
-export const DEFAULT_PORT = -1; // Invalid port to force user input
+export const DEFAULT_PORT = 51337; // Default port for LAN multiplayer
 export const DEFAULT_USER: User = { name: 'Player1', balance: 1000, dateCreated: new Date(), dateUpdated: new Date() }; // Placeholder user
 
 export const CHARACTER_MOVEMENT_DELAY_MS = 500;

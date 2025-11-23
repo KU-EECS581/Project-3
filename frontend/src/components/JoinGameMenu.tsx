@@ -1,6 +1,11 @@
 /**
  * @file JoinGameMenu.tsx
- * @description Form component for joining a game server.
+ * @description Form for specifying host/port and initiating server join.
+ * @class JoinGameMenu
+ * @module Components/Lobby
+ * @inputs onJoinGame(host,port), disabled/hidden flags
+ * @outputs Calls onJoinGame with parsed values
+ * @external_sources React (useCallback)
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */
@@ -27,10 +32,33 @@ export function JoinGameMenu({ onJoinGame, hidden, disabled = false }: JoinGameM
 
     return (
         <form onSubmit={handleFormSubmission} hidden={hidden}>
-            <label htmlFor="host">Host: </label>
-            <input disabled={disabled} type="text" id="host" placeholder='localhost'/> <br/>
-            <label htmlFor="port">Port: </label>
-            <input disabled={disabled} type="text" id="port" placeholder='8080'/> <br/>
+            <div>
+                <label htmlFor="host">Host IP Address: </label>
+                <input 
+                    disabled={disabled} 
+                    type="text" 
+                    id="host" 
+                    placeholder='192.168.1.105'
+                    title="Enter the hosting device's LAN IP address (e.g., 192.168.1.105). Use 'localhost' or '127.0.0.1' only if connecting from the same machine."
+                />
+                <small style={{ display: 'block', color: '#666', fontSize: '0.85em', marginTop: '4px' }}>
+                    <strong>Use 127.0.0.1 or localhost</strong> when hosting on this same device.<br/>
+                    <strong>Use 192.168.x.x</strong> when joining another device on your WiFi.
+                </small>
+            </div>
+            <br/>
+            <div>
+                <label htmlFor="port">Port: </label>
+                <input 
+                    disabled={disabled} 
+                    type="text" 
+                    id="port" 
+                    defaultValue='51337'
+                    placeholder='51337'
+                    title="Enter the port number the server is running on (default: 51337)"
+                />
+            </div>
+            <br/>
             <button type="submit" disabled={disabled}>Join Game</button>
         </form>
     )

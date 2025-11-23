@@ -1,6 +1,13 @@
 /**
  * @file types.ts
- * @description Types for the slots game
+ * @description Slot machine symbol constants, weights, payouts & state interfaces.
+ * @class N/A (types/constants)
+ * @module Components/Slots
+ * @inputs N/A
+ * @outputs Exported symbol constants, weight maps, payout table, state interfaces
+ * @external_sources N/A
+ * @author Riley Meyerkorth
+ * @date 2025-10-26
  */
 
 // Slot machine symbols

@@ -1,6 +1,11 @@
 /**
  * @file PlayerCharacter.ts
- * @description Barrel file for player character models.
+ * @description Player character position + user association model.
+ * @class N/A
+ * @module Models/Player
+ * @inputs User reference, x/y coordinates
+ * @outputs PlayerCharacter interface
+ * @external_sources N/A
  * @author Riley Meyerkorth
  * @date 2025-10-25
  */
