@@ -17,3 +17,4 @@ export * from './useCharacterCollisions';
 export * from './useGameWorld';
 export * from './useConnectionCheck';
 export * from './useDeck';
+export * from './useSfx';

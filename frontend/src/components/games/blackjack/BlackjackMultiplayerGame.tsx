@@ -6,7 +6,7 @@
  * @inputs onBackToMap navigation callback
  * @outputs Real-time UI synced to server state, balance updates
  * @external_sources React hooks, GameServer & UserData contexts
- * @author Riley Meyerkorth
+ * @author Ty Farrington
  * @date 2025-11-20
  */
 
