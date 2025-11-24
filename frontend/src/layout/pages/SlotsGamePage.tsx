@@ -14,6 +14,7 @@ import { useCallback, useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { RoutePath } from "../enums";
 import { useUserData } from "@/hooks";
+import { useSfx } from "@/hooks/useSfx";
 
 const SYMBOLS = ['🍒', '🍋', '🍊', '🔔', '⭐', '💎', '7️⃣'];
 const REEL_COUNT = 9; // 3x3 grid
@@ -43,6 +44,7 @@ interface ReelState {
 export function SlotsGamePage() {
     const navigate = useNavigate();
     const userData = useUserData();
+    const { playBet, playSlotsSpin, playWin, playLose } = useSfx();
     const [reels, setReels] = useState<ReelState[]>(
         Array(REEL_COUNT).fill(0).map((_, i) => ({
             spinning: false,
@@ -142,12 +144,14 @@ export function SlotsGamePage() {
 
         // Deduct bet
         userData.removeFunds(betAmount);
+        playBet();
         setIsSpinning(true);
         setLastWin(null);
         setLastCombination('');
 
         // Start spinning animation
         setReels(reels.map(() => ({ spinning: true, currentSymbol: getRandomSymbol() })));
+        playSlotsSpin();
 
         // Animate reels
         const spinInterval = setInterval(() => {
@@ -182,8 +186,10 @@ export function SlotsGamePage() {
             if (winAmount > 0) {
                 setLastWin(winAmount);
                 userData.addFunds(winAmount);
+                playWin();
             } else {
                 setLastWin(0);
+                playLose();
             }
             
             setIsSpinning(false);

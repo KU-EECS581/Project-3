@@ -16,10 +16,12 @@ import { CardBack, CardView } from './CardView';
 import { BettingControls } from './BettingControls';
 import type { Suit, Rank } from '~middleware/cards';
 import { evaluateCommunityAndHole } from './handEval';
+import { useSfx } from '@/hooks/useSfx';
 
 export function PokerTable() {
     const { user: me } = useUserData();
     const server = useGameServer();
+    const { playBet } = useSfx();
     const state = server.pokerState;
     const [remaining, setRemaining] = useState<number>(0);
     const [showdownChoice, setShowdownChoice] = useState<'show' | 'muck' | undefined>(undefined);
@@ -62,10 +64,21 @@ export function PokerTable() {
     const toCall = state && current ? Math.max(0, state.currentBet - current.currentBet) : 0;
     const canCheck = toCall === 0;
 
-    const onCheck = () => server.pokerCheck();
-    const onCall = () => server.pokerCall();
-    const onBetOrRaise = (amount: number) => server.pokerBet(amount);
-    const onFold = () => server.pokerFold();
+    const onCheck = () => {
+        server.pokerCheck();
+    };
+    const onCall = () => {
+        server.pokerCall();
+    };
+    const onBetOrRaise = (amount: number) => {
+        server.pokerBet(amount);
+        if (amount > 0) {
+            playBet();
+        }
+    };
+    const onFold = () => {
+        server.pokerFold();
+    };
 
     const seats = useMemo(() => (state?.players ?? []).map((p, i) => {
         const isMe = me?.name && p.user.name === me.name;

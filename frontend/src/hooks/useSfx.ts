@@ -11,46 +11,56 @@
  */
 
 import { useCallback } from 'react';
-
-const SFX_FOLDER = 'sfx';
-const SFX_EXTENSION = 'mp3';
+import useSound from 'use-sound';
+import sfxCardDealUrl from "@/assets/sfx/card_deal.mp3";
+import sfxCardFlipUrl from "@/assets/sfx/card_flip.mp3";
+import sfxBetUrl from "@/assets/sfx/bet.mp3";
+import sfxWinUrl from "@/assets/sfx/win_1.mp3";
+import sfxLoseUrl from "@/assets/sfx/lose_1.mp3";
+import sfxShuffleUrl from "@/assets/sfx/shuffle.mp3";
+import sfxSlotsSpinUrl from "@/assets/sfx/slots_spin.mp3";
 
 export function useSfx() {
-    const playSfx = useCallback((sfxName: string) => {
-        console.debug("Playing SFX:", sfxName);
-        const audio = new Audio(`/${SFX_FOLDER}/${sfxName}.${SFX_EXTENSION}`);
-        audio.play().catch(err => {
-            console.error(`Error playing sound effect "${sfxName}":`, err);
-        });
-    }, []);
+    const [sfxCardDeal] = useSound(sfxCardDealUrl);
+    const [sfxCardFlip] = useSound(sfxCardFlipUrl);
+    const [sfxBet] = useSound(sfxBetUrl);
+    const [sfxWin] = useSound(sfxWinUrl);
+    const [sfxLose] = useSound(sfxLoseUrl);
+    const [sfxShuffle] = useSound(sfxShuffleUrl);
+    const [sfxSlotsSpin] = useSound(sfxSlotsSpinUrl); 
 
     const playCardDeal = useCallback(() => {
-        playSfx('card_deal');
-    }, [playSfx]);
+        console.debug("Playing card deal SFX");
+        sfxCardDeal();
+    }, [sfxCardDeal]);
 
     const playCardFlip = useCallback(() => {
-        playSfx('card_flip');
-    }, [playSfx]);
+        console.debug("Playing card flip SFX");
+        sfxCardFlip();
+    }, [sfxCardFlip]);
 
     const playBet = useCallback(() => {
-        playSfx('bet');
-    }, [playSfx]);
+        console.debug("Playing bet SFX");
+        sfxBet();
+    }, [sfxBet]);
 
     const playWin = useCallback(() => {
-        playSfx('win');
-    }, [playSfx]);
+        console.debug("Playing win SFX");
+        sfxWin();
+    }, [sfxWin]);
 
     const playLose = useCallback(() => {
-        playSfx('lose');
-    }, [playSfx]);
-
+        console.debug("Playing lose SFX");
+        sfxLose();
+    }, [sfxLose]);
     const playShuffle = useCallback(() => {
-        playSfx('shuffle');
-    }, [playSfx]);
+        console.debug("Playing shuffle SFX");
+        sfxShuffle();
+    }, [sfxShuffle]);
 
     const playSlotsSpin = useCallback(() => {
-        playSfx('slots_spin');
-    }, [playSfx]);
-
-    return { playSfx, playCardDeal, playCardFlip, playBet, playWin, playLose, playShuffle, playSlotsSpin };
+        console.debug("Playing slots spin SFX");
+        sfxSlotsSpin();
+    }, [sfxSlotsSpin]);
+    return { playCardDeal, playCardFlip, playBet, playWin, playLose, playShuffle, playSlotsSpin };
 }
