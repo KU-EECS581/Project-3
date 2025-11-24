@@ -73,7 +73,13 @@ export function PokerGame({
                 backgroundColor: 'green',
                 }} >
                 
-            { !isGameStarted && <PokerGameLobby settings={settings} onGameStarted={handleStartGame} onSettingsChanged={handleSettingsChanged} /> }
+            { !isGameStarted && (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 8 }}>
+                        <PokerGameLobby settings={settings} onGameStarted={handleStartGame} onSettingsChanged={handleSettingsChanged} />
+                    </div>
+                </div>
+            ) }
             { isGameStarted && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
                     <PokerTable />
