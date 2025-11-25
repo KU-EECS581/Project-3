@@ -201,6 +201,7 @@ export function BlackjackGame({ player, initialBet = MIN_BET, onGameEnd }: Black
         setDealerHand(currentDealerHand => {
           if (shouldDealerHit(currentDealerHand)) {
             const card = currentDeck.dealCard();
+            playCardDeal();
             if (!card) {
               // No cards left, dealer stands
               setTimeout(() => {

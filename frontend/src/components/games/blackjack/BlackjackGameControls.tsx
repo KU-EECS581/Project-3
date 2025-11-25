@@ -17,6 +17,7 @@ import { UserDataContext } from "@/contexts/UserDataContext";
 import type { GamePhase, TableGameState } from "./types";
 import { calculateHandValue, getBestHandValue, isBusted, shouldDealerHit } from "./utils";
 import { useBlackjackStats } from "@/hooks/useBlackjackStats";
+import { useSfx } from "@/hooks/useSfx";
 
 interface BlackjackGameControlsProps {
   onGameStateUpdate: (state: TableGameState) => void;
@@ -41,13 +42,15 @@ export function BlackjackGameControls({
   const [canDoubleDown, setCanDoubleDown] = useState(false);
   const [playerStood, setPlayerStood] = useState(false);
   const [gameResult, setGameResult] = useState<"win" | "loss" | "push" | "blackjack" | null>(null);
+  const { playCardDeal, playLose, playWin, playBet, playShuffle } = useSfx();
 
   // Initialize deck when component mounts
   useEffect(() => {
     const newDeck = new Deck();
     newDeck.shuffle();
+      playShuffle();
     setDeck(newDeck);
-  }, []);
+  }, [playShuffle]);
   
   // Reset game state when component first mounts
   useEffect(() => {
@@ -90,6 +93,7 @@ export function BlackjackGameControls({
   const dealInitialCards = useCallback(() => {
     const newDeck = new Deck();
     newDeck.shuffle();
+    playShuffle();
     
     // Store cards as we deal them
     let playerCard1: Card | undefined;
@@ -99,6 +103,7 @@ export function BlackjackGameControls({
     
     // Deal first card to player
     playerCard1 = newDeck.dealCard();
+    playCardDeal();
     if (playerCard1) {
       setPlayerHand([playerCard1]);
     }
@@ -106,6 +111,7 @@ export function BlackjackGameControls({
     // Deal first card to dealer (after 400ms)
     setTimeout(() => {
       dealerCard1 = newDeck.dealCard();
+      playCardDeal();
       if (dealerCard1) {
         setDealerHand([dealerCard1]);
       }
@@ -114,6 +120,7 @@ export function BlackjackGameControls({
     // Deal second card to player (after 800ms)
     setTimeout(() => {
       playerCard2 = newDeck.dealCard();
+      playCardDeal();
       if (playerCard2 && playerCard1) {
         setPlayerHand([playerCard1, playerCard2]);
       }
@@ -122,6 +129,7 @@ export function BlackjackGameControls({
     // Deal second card to dealer face down (after 1200ms)
     setTimeout(() => {
       dealerCard2 = newDeck.dealCard();
+      playCardDeal();
       if (dealerCard2 && dealerCard1) {
         setDeck(newDeck);
         setDealerHand([dealerCard1, dealerCard2]);
@@ -146,21 +154,24 @@ export function BlackjackGameControls({
                       setGameResult("push");
                       recordResult("push");
                       onGameEnd?.(0, "push");
+                      playWin();
                     } else if (playerBJ) {
                       setGameResult("blackjack");
                       recordResult("blackjack");
                       onGameEnd?.(Math.floor(bet * 2.5), "blackjack");
+                      playWin();
                     } else {
                       setGameResult("loss");
                       recordResult("loss");
                       onGameEnd?.(0, "loss");
+                      playLose();
                     }
             }
           }
         }, 200);
       }
     }, 1200);
-  }, [deck, bet, onGameEnd]);
+  }, [deck, bet, onGameEnd, playWin, playLose, recordResult]);
 
   // Place bet and deal
   const handlePlaceBet = useCallback(() => {
@@ -169,18 +180,20 @@ export function BlackjackGameControls({
     if (!deck) return;
 
     userCtx.removeFunds(bet);
+    playBet();
     
     // Small delay before dealing to show bet was placed
     setTimeout(() => {
       dealInitialCards();
     }, 300);
-  }, [bet, userCtx, deck, dealInitialCards]);
+  }, [bet, userCtx, deck, dealInitialCards, playBet]);
 
   // Player hits
   const handleHit = useCallback(() => {
     if (!deck || phase !== "player_turn" || playerStood || playerBusted) return;
 
     const card = deck.dealCard();
+    playCardDeal();
     if (!card) return;
 
     const newHand = [...playerHand, card];
@@ -193,8 +206,9 @@ export function BlackjackGameControls({
       setGameResult("loss");
       recordResult("loss");
       onGameEnd?.(0, "loss");
+      playLose();
     }
-  }, [deck, phase, playerHand, playerStood, playerBusted, onGameEnd, recordResult]);
+  }, [deck, phase, playerHand, playerStood, playerBusted, onGameEnd, recordResult, playLose, playCardDeal]);
 
   // Player stands
   const handleStand = useCallback(() => {
@@ -204,7 +218,7 @@ export function BlackjackGameControls({
     setDealerVisible(true);
     setPhase("dealer_turn");
     startDealerTurn();
-  }, [phase, playerStood]);
+  }, [phase, playerStood, playCardDeal, startDealerTurn]);
 
   // Double down
   const handleDoubleDown = useCallback(() => {
@@ -214,6 +228,7 @@ export function BlackjackGameControls({
     setBet(prev => prev * 2);
 
     const card = deck.dealCard();
+    playCardDeal();
     if (!card) return;
 
     const newHand = [...playerHand, card];
@@ -228,11 +243,11 @@ export function BlackjackGameControls({
       setGameResult("loss");
       recordResult("loss");
       onGameEnd?.(0, "loss");
+      playLose();
     } else {
       startDealerTurn();
     }
-  }, [canDoubleDown, deck, playerHand, userCtx, bet, onGameEnd, recordResult]);
-
+  }, [canDoubleDown, deck, playerHand, userCtx, bet, onGameEnd, recordResult, playLose]);
   // Dealer turn
   const startDealerTurn = useCallback(() => {
     const dealerPlay = () => {
@@ -242,6 +257,7 @@ export function BlackjackGameControls({
         setDealerHand(currentDealerHand => {
           if (shouldDealerHit(currentDealerHand)) {
             const card = currentDeck.dealCard();
+            playCardDeal();
             if (!card) {
               setTimeout(() => {
                 setPhase("finished");
@@ -254,10 +270,12 @@ export function BlackjackGameControls({
                       setGameResult("win");
                       recordResult("win");
                       onGameEnd?.(bet * 2, "win");
+                      playWin();
                     } else if (playerVal < dealerVal) {
                       setGameResult("loss");
                       recordResult("loss");
                       onGameEnd?.(0, "loss");
+                      playLose();
                     } else {
                       setGameResult("push");
                       recordResult("push");
@@ -279,6 +297,7 @@ export function BlackjackGameControls({
                 setGameResult("win");
                 recordResult("win");
                 onGameEnd?.(bet * 2, "win");
+                playWin();
               }, 500);
               return newDealerHand;
             } else {
@@ -296,10 +315,12 @@ export function BlackjackGameControls({
                   setGameResult("win");
                   recordResult("win");
                   onGameEnd?.(bet * 2, "win");
+                  playWin();
                 } else if (playerVal < dealerVal) {
                   setGameResult("loss");
                   recordResult("loss");
                   onGameEnd?.(0, "loss");
+                  playLose();
                 } else {
                   setGameResult("push");
                   recordResult("push");
@@ -317,7 +338,7 @@ export function BlackjackGameControls({
     };
 
     setTimeout(dealerPlay, 500);
-  }, [bet, onGameEnd, recordResult]);
+  }, [bet, onGameEnd, recordResult, playWin, playLose, playCardDeal]);
 
   // New game
   const handleNewGame = useCallback(() => {
@@ -341,7 +362,8 @@ export function BlackjackGameControls({
       const newBet = Math.max(MIN_BET, Math.min(MAX_BET, prev + delta));
       return newBet;
     });
-  }, []);
+    playBet();
+  }, [playBet]);
 
   // Calculate balance and derived values
   const balance = userCtx?.user?.balance ?? 0;
